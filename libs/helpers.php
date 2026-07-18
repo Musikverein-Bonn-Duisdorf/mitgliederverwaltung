@@ -72,6 +72,35 @@ function getPage($string) {
     }
 }
 
+function loginUserBySsoId($userId) {
+    $userId = (int)$userId;
+    if($userId < 1) {
+        return false;
+    }
+    $user = new IdentityUser();
+    if(!$user->load_by_id($userId) || (int)$user->Deleted === 1) {
+        return false;
+    }
+    $_SESSION['userid'] = (int)$user->Index;
+    $_SESSION['Vorname'] = $user->Vorname;
+    $_SESSION['Nachname'] = $user->Nachname;
+    $_SESSION['username'] = $user->getName();
+    $_SESSION['admin'] = (bool)$user->Admin;
+    $_SESSION['singleUsePW'] = (bool)$user->singleUsePW;
+    return true;
+}
+
+function tryMeldeSsoLoginFromRequest() {
+    if(!isset($_GET['sso']) || trim((string)$_GET['sso']) === '') {
+        return false;
+    }
+    $userId = SsoTicket::redeem($_GET['sso']);
+    if(!$userId) {
+        return false;
+    }
+    return loginUserBySsoId($userId);
+}
+
 function validateUser($login, $password) {
     $_SESSION['userid'] = 0;
     $login = trim((string)$login);

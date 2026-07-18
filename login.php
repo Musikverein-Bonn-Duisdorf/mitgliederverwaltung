@@ -16,6 +16,10 @@ session_start();
   <h1><?php echo h($optionsDB['WebSiteName']); ?></h1>
 </div>
 <?php
+if(tryMeldeSsoLoginFromRequest()) {
+    echo '<meta http-equiv="refresh" content="0; URL=\'index.php\'" />';
+    die('<div class="w3-panel '.$optionsDB['colorSuccess'].'"><h2>Login erfolgreich (SSO).</h2></div>');
+}
 if(isset($_POST['triggerlogin'])) {
     if(!validateUser($_POST['login'] ?? '', $_POST['password'] ?? '')) {
         echo '<div class="w3-panel '.$optionsDB['colorLogError'].'"><h2>Login fehlgeschlagen.</h2></div>';

@@ -14,6 +14,7 @@ include __DIR__.'/../libs/Membership.php';
 include __DIR__.'/../libs/MembershipPeriod.php';
 include __DIR__.'/../libs/SepaMandate.php';
 include __DIR__.'/../libs/Document.php';
+include __DIR__.'/../libs/ssoTicket.php';
 $optionsDB = loadconfig();
 global $optionsDB;
 include __DIR__.'/version.php';
