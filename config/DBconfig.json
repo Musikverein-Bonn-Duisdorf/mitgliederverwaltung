@@ -1,0 +1,59 @@
+{
+    "Membership": {
+        "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
+        "User": {"Type": "int"},
+        "Type": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "Status": {"Type": "text", "Collation": "utf8mb4_unicode_ci"}
+    },
+    "MembershipPeriod": {
+        "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
+        "Membership": {"Type": "int"},
+        "DateFrom": {"Type": "date"},
+        "DateTo": {"Type": "date", "Null": "YES"}
+    },
+    "SepaMandate": {
+        "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
+        "User": {"Type": "int"},
+        "IbanEnc": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "Bic": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "MandateRef": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "ValidFrom": {"Type": "date"},
+        "ValidTo": {"Type": "date", "Null": "YES"},
+        "Active": {"Type": "tinyint", "Default": 1}
+    },
+    "DebitBatch": {
+        "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
+        "Created": {"Type": "timestamp", "Default": "CURRENT_TIMESTAMP", "Extra": "DEFAULT_GENERATED"},
+        "Name": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "Status": {"Type": "text", "Collation": "utf8mb4_unicode_ci"}
+    },
+    "DebitItem": {
+        "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
+        "Batch": {"Type": "int"},
+        "User": {"Type": "int"},
+        "AmountCents": {"Type": "int"},
+        "Status": {"Type": "text", "Collation": "utf8mb4_unicode_ci"}
+    },
+    "Document": {
+        "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
+        "User": {"Type": "int"},
+        "DocType": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "NextcloudPath": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "UploadedAt": {"Type": "timestamp", "Default": "CURRENT_TIMESTAMP", "Extra": "DEFAULT_GENERATED"},
+        "Note": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"}
+    },
+    "config": {
+        "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
+        "Parameter": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "Value": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "Type": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "Description": {"Type": "text", "Collation": "utf8mb4_unicode_ci"}
+    },
+    "Log": {
+        "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
+        "User": {"Type": "int", "Null": "YES", "Default": 0},
+        "Timestamp": {"Type": "timestamp", "Default": "CURRENT_TIMESTAMP", "Extra": "DEFAULT_GENERATED"},
+        "Type": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "Message": {"Type": "text", "Collation": "utf8mb4_unicode_ci"}
+    }
+}
