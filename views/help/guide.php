@@ -97,7 +97,7 @@ $sections[] = array(
     'body' => '
 <ul class="help-list">
 '.($canEditPermissions ? '
-<li><b>Berechtigungen</b> – Matrix für MIT-Rechte (lesen/schreiben Nutzerdaten, Rechte verwalten). Melde-Admin darf beim Erststart die Matrix öffnen, bis jemand „Berechtigungen verwalten“ hat</li>
+<li><b>Berechtigungen</b> – Matrix für MIT-Rechte (lesen/schreiben Nutzerdaten, Rechte verwalten). Wenn noch niemand Rechte hat, erhält der erste erfolgreiche Login automatisch alle Rechte</li>
 ' : '').'
 '.($canEditConfig ? '
 <li><b>Konfiguration</b> – Site-Name, URLs, Farben und Farbschema; Änderungen erscheinen im Log. Schema-Version und Schema-Metadaten werden hier nicht bearbeitet</li>

@@ -165,9 +165,6 @@ function computeAdminForUser($userId, $legacyAdmin = false) {
     if(class_exists('Permissions') && Permissions::loadByUser($userId)->isAdmin()) {
         return true;
     }
-    if(class_exists('Permissions') && Permissions::bootstrapEditAllowed($userId)) {
-        return true;
-    }
     return IdentityPermissions::loadForUser($userId)->isAdmin();
 }
 
@@ -185,7 +182,12 @@ function refreshSessionAdmin() {
         identityPrefix(),
         $uid
     );
-    $dbr = @mysqli_query($GLOBALS['conn'], $sql);
+    try {
+        $dbr = mysqli_query($GLOBALS['conn'], $sql);
+    }
+    catch(Throwable $e) {
+        $dbr = false;
+    }
     $row = ($dbr) ? mysqli_fetch_assoc($dbr) : null;
     $legacy = $row ? (bool)$row['Admin'] : false;
     $_SESSION['admin'] = computeAdminForUser($uid, $legacy);
@@ -201,6 +203,9 @@ function enforceMitgliederverwaltungAccess() {
     }
     $uid = (int)$_SESSION['userid'];
     if(userMayAccessMitgliederverwaltung($uid)) {
+        if(class_exists('Permissions')) {
+            Permissions::grantAllIfNobodyHasRights($uid);
+        }
         refreshSessionAdmin();
         return true;
     }
@@ -222,6 +227,9 @@ function loginUserBySsoId($userId) {
         clearAuthSession();
         $GLOBALS['loginDeniedNoAccess'] = true;
         return false;
+    }
+    if(class_exists('Permissions')) {
+        Permissions::grantAllIfNobodyHasRights((int)$user->Index);
     }
     $_SESSION['userid'] = (int)$user->Index;
     $_SESSION['Vorname'] = $user->Vorname;
@@ -261,6 +269,9 @@ function validateUser($login, $password) {
         clearAuthSession();
         $GLOBALS['loginDeniedNoAccess'] = true;
         return false;
+    }
+    if(class_exists('Permissions')) {
+        Permissions::grantAllIfNobodyHasRights((int)$user->Index);
     }
     $_SESSION['userid'] = (int)$user->Index;
     $_SESSION['Vorname'] = $user->Vorname;
@@ -491,13 +502,7 @@ function hasPermission($perm = '') {
         return false;
     }
     if($perm !== '' && class_exists('Permissions') && Permissions::isMitKey($perm)) {
-        if(Permissions::loadByUser($uid)->getPermission($perm)) {
-            return true;
-        }
-        if($perm === 'perm_editPermissions' && Permissions::bootstrapEditAllowed($uid)) {
-            return true;
-        }
-        return false;
+        return Permissions::loadByUser($uid)->getPermission($perm);
     }
     $sql = sprintf(
         "SELECT `Admin` FROM `%sUser` WHERE `Index` = %d LIMIT 1;",

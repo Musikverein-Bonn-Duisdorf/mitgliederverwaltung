@@ -15,8 +15,6 @@ foreach($permCatalog as $item) {
 $permLabels = Permissions::permissionLabels();
 $sessionUserId = isset($_SESSION['userid']) ? (int)$_SESSION['userid'] : 0;
 $inputBg = $GLOBALS['optionsDB']['colorInputBackground'];
-$bootstrapHint = Permissions::bootstrapEditAllowed($sessionUserId)
-    && !Permissions::loadByUser($sessionUserId)->getPermission('perm_editPermissions');
 
 $sql = sprintf(
     'SELECT `Index` FROM `%sUser` WHERE `Deleted` != 1 ORDER BY `Nachname`, `Vorname`;',
@@ -46,12 +44,6 @@ adminListPageBegin('System', 'Berechtigungen', array(
     'shellClass' => 'perm-page-shell',
     'actionsHtml' => '<span id="permSaveStatus" class="profile-label perm-save-status" aria-live="polite"></span>',
 ));
-if($bootstrapHint) {
-    echo '<div class="w3-panel '.h($GLOBALS['optionsDB']['colorWarning']).' w3-padding">'
-        .'<b>Erstkonfiguration:</b> Noch niemand hat „Berechtigungen verwalten“. '
-        .'Als Melde-Admin kannst du Rechte setzen — vergib dir dieses Recht, damit der Bootstrap endet.'
-        .'</div>';
-}
 ?>
     <div class="perm-toolbar">
       <div class="profile-field perm-toolbar-search">

@@ -162,23 +162,70 @@ class Permissions
     }
 
     /**
-     * First-run bootstrap: Melde User.Admin may manage MIT rights until someone has perm_editPermissions.
+     * True if any MIT right is assigned to anyone.
+     * @return bool
+     */
+    public static function anyoneHasAnyPermission() {
+        if(!self::tableReady()) {
+            return false;
+        }
+        $parts = array();
+        foreach(self::permissionKeys() as $key) {
+            $parts[] = '`'.$key.'` = 1';
+        }
+        $sql = sprintf(
+            'SELECT 1 FROM `%s` WHERE %s LIMIT 1;',
+            self::tableName(),
+            implode(' OR ', $parts)
+        );
+        $dbr = self::query($sql);
+        return ($dbr && mysqli_fetch_row($dbr)) ? true : false;
+    }
+
+    /**
+     * If the MIT rights table is empty of grants, give this user every MIT right.
+     * Used on first successful login / session enforce.
+     * @param int $userId
+     * @return bool true if rights were granted
+     */
+    public static function grantAllIfNobodyHasRights($userId) {
+        $userId = (int)$userId;
+        if($userId < 1 || !self::tableReady()) {
+            return false;
+        }
+        if(self::anyoneHasAnyPermission()) {
+            return false;
+        }
+        $p = new self();
+        $p->load_by_user($userId);
+        foreach(self::permissionKeys() as $key) {
+            $p->$key = 1;
+        }
+        if(!$p->save()) {
+            return false;
+        }
+        self::clearCache($userId);
+        if(class_exists('Log')) {
+            $log = new Log();
+            $log->info(sprintf(
+                'MIT-Rechte Erstvergabe: User (%d) erhielt alle Rechte (noch niemand hatte Rechte).',
+                $userId
+            ));
+        }
+        return true;
+    }
+
+    /**
+     * @deprecated Prefer grantAllIfNobodyHasRights on login; kept for UI hint compatibility.
      * @param int $userId
      * @return bool
      */
     public static function bootstrapEditAllowed($userId) {
         $userId = (int)$userId;
-        if($userId < 1 || self::anyoneHasEditPermissions()) {
+        if($userId < 1) {
             return false;
         }
-        $sql = sprintf(
-            'SELECT `Admin` FROM `%sUser` WHERE `Index` = %d LIMIT 1;',
-            identityPrefix(),
-            $userId
-        );
-        $dbr = self::query($sql);
-        $row = ($dbr) ? mysqli_fetch_assoc($dbr) : null;
-        return $row && !empty($row['Admin']);
+        return !self::anyoneHasAnyPermission();
     }
 
     /**
