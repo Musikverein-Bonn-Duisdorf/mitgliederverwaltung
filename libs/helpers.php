@@ -25,6 +25,39 @@ function loadconfig() {
             }
         }
     }
+    // Migrate legacy w3-* color class defaults to Melde Hex kit when still stored.
+    $legacyW3Colors = array(
+        'colorBackground' => 'w3-light-grey',
+        'colorTitle' => 'w3-teal',
+        'colorTitleBar' => 'w3-pale-blue',
+        'colorNav' => 'w3-dark-grey',
+        'colorNavAdmin' => 'w3-grey',
+        'colorInputBackground' => 'w3-white',
+        'colorBtnSubmit' => 'w3-blue',
+        'colorSuccess' => 'w3-pale-green',
+        'colorLogError' => 'w3-pale-red',
+        'colorLogWarning' => 'w3-pale-yellow',
+    );
+    if(function_exists('getConfigDefaults')) {
+        $defaultsByKey = array();
+        foreach(getConfigDefaults() as $item) {
+            $defaultsByKey[$item['Parameter']] = $item['Value'];
+        }
+        foreach($legacyW3Colors as $param => $legacy) {
+            if(isset($optionsDB[$param]) && (string)$optionsDB[$param] === $legacy
+                && isset($defaultsByKey[$param])) {
+                $optionsDB[$param] = $defaultsByKey[$param];
+            }
+        }
+    }
+    if(function_exists('getColorConfigParameters') && function_exists('colorToCssClass')) {
+        $colorParams = getColorConfigParameters();
+        foreach($optionsDB as $param => $value) {
+            if(isset($colorParams[$param]) || (function_exists('isHexColor') && isHexColor($value))) {
+                $optionsDB[$param] = colorToCssClass($value);
+            }
+        }
+    }
     return $optionsDB;
 }
 
@@ -67,16 +100,26 @@ function sqlerror() {
 }
 }
 
-function getPage($string) {
-    if(!isset($_SESSION['page'])) {
-        echo isset($GLOBALS['optionsDB']['colorNav']) ? $GLOBALS['optionsDB']['colorNav'] : 'w3-dark-grey';
+function getPage($string, $groupId = '') {
+    $page = isset($_SESSION['page']) ? (string)$_SESSION['page'] : '';
+    if($string === $page) {
+        echo isset($GLOBALS['optionsDB']['colorTitleBar']) ? $GLOBALS['optionsDB']['colorTitleBar'] : '';
         return;
     }
-    if($string === $_SESSION['page']) {
-        echo isset($GLOBALS['optionsDB']['colorTitleBar']) ? $GLOBALS['optionsDB']['colorTitleBar'] : 'w3-pale-blue';
+    if($groupId !== '' && function_exists('navGroupClass')) {
+        echo navGroupClass($groupId);
+        return;
+    }
+    echo isset($GLOBALS['optionsDB']['colorNav']) ? $GLOBALS['optionsDB']['colorNav'] : '';
+}
+
+function getAdminPage($string) {
+    $page = isset($_SESSION['page']) ? (string)$_SESSION['page'] : '';
+    if($string === $page && !empty($_SESSION['adminpage'])) {
+        echo isset($GLOBALS['optionsDB']['colorTitleBar']) ? $GLOBALS['optionsDB']['colorTitleBar'] : '';
     }
     else {
-        echo isset($GLOBALS['optionsDB']['colorNav']) ? $GLOBALS['optionsDB']['colorNav'] : 'w3-dark-grey';
+        echo isset($GLOBALS['optionsDB']['colorNavAdmin']) ? $GLOBALS['optionsDB']['colorNavAdmin'] : '';
     }
 }
 

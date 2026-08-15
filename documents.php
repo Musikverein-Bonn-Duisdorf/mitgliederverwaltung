@@ -1,6 +1,8 @@
 <?php
-session_start();
+require_once __DIR__.'/libs/sessionBootstrap.php';
+mitConfigureSession();
 $_SESSION['page'] = 'documents';
+$_SESSION['adminpage'] = false;
 include 'common/header.php';
 
 $saved = false;
@@ -22,52 +24,67 @@ if(isset($_POST['save_document'])) {
 }
 
 $documents = Document::listAll();
+$n = count($documents);
+adminListPageBegin('Dokumente', 'Metadaten ('.$n.')');
+adminListSearchField('Person, Typ, Pfad…', array('onkeyup' => 'filterListRows()'));
+if($saved) {
+    echo '<div class="w3-panel '.h($optionsDB['colorSuccess']).'">Dokument gespeichert.</div>';
+}
+elseif($error !== '') {
+    echo '<div class="w3-panel '.h($optionsDB['colorLogError']).'">'.h($error).'</div>';
+}
 ?>
-<div class="w3-container <?php echo h($optionsDB['colorTitleBar']); ?>">
-  <h2>Dokumente</h2>
-  <p class="w3-small">Nur Metadaten — Datei liegt in Nextcloud unter dem angegebenen Pfad.</p>
-</div>
-
-<?php if($saved) { ?>
-<div class="w3-panel <?php echo h($optionsDB['colorSuccess']); ?>">Dokument gespeichert.</div>
-<?php } elseif($error !== '') { ?>
-<div class="w3-panel <?php echo h($optionsDB['colorLogError']); ?>"><?php echo h($error); ?></div>
-<?php } ?>
-
-<div class="w3-container w3-margin-top">
-  <h3>Neues Dokument (Metadaten)</h3>
-  <form method="post" class="w3-container w3-card w3-padding">
-    <label>User-ID (Meldeliste)</label>
-    <input class="w3-input w3-border w3-margin-bottom" type="number" name="user" min="1" value="<?php echo $prefillUser > 0 ? $prefillUser : ''; ?>" required />
-    <label>Dokumenttyp</label>
-    <input class="w3-input w3-border w3-margin-bottom" type="text" name="doctype" placeholder="z. B. Beitrittsscan" required />
-    <label>Nextcloud-Pfad</label>
-    <input class="w3-input w3-border w3-margin-bottom" type="text" name="nextcloud_path" placeholder="/Mitglieder/123/beitritt.pdf" required />
-    <label>Notiz</label>
-    <input class="w3-input w3-border w3-margin-bottom" type="text" name="note" />
-    <button class="w3-button <?php echo h($optionsDB['colorBtnSubmit']); ?>" type="submit" name="save_document">Speichern</button>
+<div class="profile-shell w3-margin-bottom">
+  <header class="profile-hero admin-list-hero admin-list-hero--system">
+    <div class="profile-hero-text">
+      <p class="profile-kicker">Neu</p>
+      <h2 class="profile-title">Dokument anlegen</h2>
+    </div>
+  </header>
+  <form method="post" class="profile-grid w3-padding">
+    <div class="profile-field">
+      <label>User-ID (Meldeliste)</label>
+      <input class="w3-input w3-border profile-control <?php echo h($optionsDB['colorInputBackground']); ?>" type="number" name="user" min="1" value="<?php echo $prefillUser > 0 ? $prefillUser : ''; ?>" required />
+    </div>
+    <div class="profile-field">
+      <label>Dokumenttyp</label>
+      <input class="w3-input w3-border profile-control <?php echo h($optionsDB['colorInputBackground']); ?>" type="text" name="doctype" placeholder="z. B. Beitrittsscan" required />
+    </div>
+    <div class="profile-field">
+      <label>Nextcloud-Pfad</label>
+      <input class="w3-input w3-border profile-control <?php echo h($optionsDB['colorInputBackground']); ?>" type="text" name="nextcloud_path" placeholder="/Mitglieder/123/beitritt.pdf" required />
+    </div>
+    <div class="profile-field">
+      <label>Notiz</label>
+      <input class="w3-input w3-border profile-control <?php echo h($optionsDB['colorInputBackground']); ?>" type="text" name="note" />
+    </div>
+    <div class="profile-actions">
+      <button class="w3-btn <?php echo h($optionsDB['colorBtnSubmit']); ?> w3-border" type="submit" name="save_document">Speichern</button>
+    </div>
   </form>
 </div>
-
-<div class="w3-container w3-margin-top">
-  <h3>Vorhandene Dokumente</h3>
-  <?php if(count($documents)) { ?>
-  <table class="w3-table w3-bordered w3-white">
-    <tr><th>User</th><th>Typ</th><th>Pfad</th><th>Hochgeladen</th></tr>
-    <?php foreach($documents as $doc) {
-        $u = new IdentityUser();
-        $u->load_by_id((int)$doc->User);
-        ?>
-    <tr>
-      <td><?php echo h($u->getName()); ?> (#<?php echo (int)$doc->User; ?>)</td>
-      <td><?php echo h($doc->DocType); ?></td>
-      <td><code><?php echo h($doc->NextcloudPath); ?></code></td>
-      <td><?php echo h($doc->UploadedAt); ?></td>
-    </tr>
-    <?php } ?>
-  </table>
-  <?php } else { ?>
-  <p class="w3-text-grey">Noch keine Dokumente.</p>
-  <?php } ?>
+<div id="Liste">
+<?php foreach($documents as $doc) {
+    $u = new IdentityUser();
+    $u->load_by_id((int)$doc->User);
+    $name = $u->getName();
+    $search = $name.' '.$doc->DocType.' '.$doc->NextcloudPath.' '.$doc->Note;
+    ?>
+  <div class="list-row w3-padding w3-border-bottom" data-search="<?php echo h($search); ?>">
+    <div class="w3-row">
+      <div class="w3-col l3 m4 s12"><?php echo h($name); ?> <span class="w3-small w3-text-grey">#<?php echo (int)$doc->User; ?></span></div>
+      <div class="w3-col l2 m3 s12"><?php echo h($doc->DocType); ?></div>
+      <div class="w3-col l5 m5 s12"><code><?php echo h($doc->NextcloudPath); ?></code></div>
+      <div class="w3-col l2 m12 s12 w3-small"><?php echo h($doc->UploadedAt); ?></div>
+    </div>
+  </div>
+<?php } ?>
+<?php if(!$n) { ?>
+  <div class="w3-panel w3-padding">Noch keine Dokumente.</div>
+<?php } ?>
 </div>
+<?php
+adminListPageEnd();
+?>
+<script src="<?php echo assetUrl('js/filterListRows.js'); ?>"></script>
 <?php include 'common/footer.php'; ?>

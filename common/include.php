@@ -7,6 +7,9 @@ if(isset($GLOBALS['conn']) && $GLOBALS['conn']) {
 include __DIR__.'/../config/ConfigDefaults.php';
 include __DIR__.'/../config/SchemaVersion.php';
 include __DIR__.'/../libs/helpers.php';
+include __DIR__.'/../libs/uiShell.php';
+include __DIR__.'/../libs/colorschemes.php';
+include __DIR__.'/../libs/git.php';
 include __DIR__.'/../libs/SQLtable.php';
 include __DIR__.'/../libs/SchemaManager.php';
 include __DIR__.'/../libs/IdentityUser.php';
