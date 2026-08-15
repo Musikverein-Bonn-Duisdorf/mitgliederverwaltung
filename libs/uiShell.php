@@ -125,16 +125,34 @@ function renderConfigColorCss($wrapStyleTag = true) {
 }
 
 /**
- * Melde-parity hook for group chrome colors.
- * MIT has no Melde Groups UI — emit system accents only.
+ * Melde-parity group chrome colors for MIT permission groups.
  */
 function renderPermissionGroupColorCss($wrapStyleTag = true) {
-    $accent = '#345A95';
-    $strong = '#7F9DC1';
+    $systemAccent = '#345A95';
+    $systemStrong = '#7F9DC1';
     $css = '';
-    $css .= '.admin-list-shell:has(.admin-list-hero--system){--page-title-accent:'.$accent.';}';
-    $css .= '.profile-shell .profile-hero.admin-list-hero--system,.w3-container.admin-list-hero--system{background:'.$strong.';border-left-color:'.$accent.';--page-title-accent:'.$accent.';}';
-    $css .= '.app-nav .admin-nav-perm--system{background:#E8EEF5 !important;border-color:'.$accent.';color:#222 !important;}';
+    $css .= '.admin-list-shell:has(.admin-list-hero--system){--page-title-accent:'.$systemAccent.';}';
+    $css .= '.profile-shell .profile-hero.admin-list-hero--system,.w3-container.admin-list-hero--system{background:'.$systemStrong.';border-left-color:'.$systemAccent.';--page-title-accent:'.$systemAccent.';}';
+    $css .= '.app-nav .admin-nav-perm--system{background:#E8EEF5 !important;border-color:'.$systemAccent.';color:#222 !important;}';
+    if(class_exists('Permissions')) {
+        foreach(Permissions::permissionGroups() as $group) {
+            $id = preg_replace('/[^a-z0-9_-]/i', '', (string)$group['id']);
+            if($id === '') {
+                continue;
+            }
+            $hex = isset($group['color']) ? normalizeHexColor($group['color']) : '#42A5F5';
+            // Soft fill for matrix headers/cells (approx. 78% toward white).
+            $r = hexdec(substr($hex, 1, 2));
+            $g = hexdec(substr($hex, 3, 2));
+            $b = hexdec(substr($hex, 5, 2));
+            $soft = sprintf('#%02X%02X%02X', (int)($r + (255 - $r) * 0.78), (int)($g + (255 - $g) * 0.78), (int)($b + (255 - $b) * 0.78));
+            $css .= '.admin-list-shell:has(.admin-list-hero--'.$id.'){--page-title-accent:'.$hex.';}';
+            $css .= '.profile-shell .profile-hero.admin-list-hero--'.$id.',.w3-container.admin-list-hero--'.$id.'{background:'.$soft.';border-left-color:'.$hex.';--page-title-accent:'.$hex.';}';
+            $css .= '.perm-matrix th.perm-group--'.$id.',.perm-matrix td.perm-group--'.$id.'.perm-on{background:'.$soft.';}';
+            $css .= '.perm-matrix th.perm-group--'.$id.'{border-bottom-color:'.$hex.';}';
+            $css .= '.app-nav .admin-nav-perm--'.$id.',.app-nav a[class*="nav-group--'.$id.'"]{--nav-group-accent:'.$hex.';}';
+        }
+    }
     return $wrapStyleTag ? '<style type="text/css" id="perm-group-colors">'.$css.'</style>' : $css;
 }
 

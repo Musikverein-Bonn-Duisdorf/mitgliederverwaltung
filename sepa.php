@@ -4,6 +4,7 @@ mitConfigureSession();
 $_SESSION['page'] = 'sepa';
 $_SESSION['adminpage'] = false;
 include 'common/header.php';
+requirePermission('perm_showUsers');
 
 $mandates = SepaMandate::listAll();
 $n = count($mandates);

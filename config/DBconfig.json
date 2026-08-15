@@ -55,5 +55,12 @@
         "User": {"Type": "int", "Null": "YES", "Default": 0},
         "Type": {"Type": "int"},
         "Message": {"Type": "text", "Collation": "utf8mb4_unicode_ci"}
+    },
+    "Permissions": {
+        "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
+        "User": {"Type": "int"},
+        "perm_showUsers": {"Type": "tinyint", "Default": 0},
+        "perm_editUsers": {"Type": "tinyint", "Default": 0},
+        "perm_editPermissions": {"Type": "tinyint", "Default": 0}
     }
 }

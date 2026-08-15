@@ -4,6 +4,7 @@ mitConfigureSession();
 $_SESSION['page'] = 'members';
 $_SESSION['adminpage'] = false;
 include 'common/header.php';
+requirePermission('perm_showUsers');
 
 $memberships = Membership::listAll();
 $n = count($memberships);

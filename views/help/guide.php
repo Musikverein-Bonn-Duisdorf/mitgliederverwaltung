@@ -10,6 +10,8 @@ $sections = array();
 $showAdmin = !empty($_SESSION['admin']);
 $canEditConfig = hasPermission('perm_editConfig');
 $canShowLog = hasPermission('perm_showLog');
+$canEditPermissions = hasPermission('perm_editPermissions');
+$canShowUsers = hasPermission('perm_showUsers');
 $meldeUrl = isset($optionsDB['urlMeldeliste']) ? trim((string)$optionsDB['urlMeldeliste']) : '';
 $masterPage = isset($optionsDB['MasterPage']) ? trim((string)$optionsDB['MasterPage']) : '';
 
@@ -17,7 +19,7 @@ $sections[] = array(
     'id' => 'einfuehrung',
     'title' => 'Einführung',
     'body' => '
-<p>Die <b>Mitgliederverwaltung</b> pflegt Mitgliedschaften, SEPA-Mandate und Dokument-Metadaten (Nextcloud-Pfade). Login und Rechte kommen aus der Meldeliste (SSO bzw. dieselben Zugangsdaten). Zugang hat nur, wer in der Meldeliste die Berechtigung <b>Mitgliederverwaltung</b> (<code>perm_accessMitgliederverwaltung</code>) besitzt.</p>
+<p>Die <b>Mitgliederverwaltung</b> pflegt Mitgliedschaften, SEPA-Mandate und Dokument-Metadaten (Nextcloud-Pfade). Login über Meldeliste (SSO bzw. dieselben Zugangsdaten) erfordert das Melde-Recht <b>Mitgliederverwaltung</b>. Was du danach siehst und bearbeiten darfst, steuern die <b>eigenen MIT-Berechtigungen</b> (lesen/schreiben Nutzerdaten, Rechte verwalten).</p>
 <p>Über die Navigation erreichst du die Bereiche, die für dich freigeschaltet sind: auf breiten Bildschirmen links mit Text, auf Tablet und Smartphone unten als Leiste (weitere Einträge und Admin unter <b>Mehr</b>). Diese Hilfe zeigt Admin-Abschnitte nur, wenn du Admin bist.</p>
 '
 );
@@ -29,13 +31,15 @@ $sections[] = array(
 <p>Auf dem Desktop steht die Navigation links (Icons mit Beschriftung). Auf schmalen Bildschirmen unten; unter <b>Mehr</b> findest du weitere Einträge, Admin und Ausloggen.</p>
 <ul class="help-list">
 <li><i class="fas fa-home"></i> <b>Übersicht</b> – Einstieg mit Zählern zu den Bereichen</li>
+'.($canShowUsers ? '
 <li><i class="fas fa-users"></i> <b>Mitglieder</b> – Mitgliedschaften (Suche, Detail)</li>
 <li><i class="fas fa-university"></i> <b>SEPA</b> – Lastschriftmandate (IBAN maskiert)</li>
 <li><i class="fas fa-file-alt"></i> <b>Dokumente</b> – Metadaten zu Nextcloud-Pfaden</li>
+' : '').'
 '.($meldeUrl !== '' ? '<li><i class="fas fa-clipboard-list"></i> <b>Meldeliste</b> – Rückkehr zur Meldeliste (SSO)</li>' : '').'
 <li>Logo oben rechts – öffnet die <b>Vereinshomepage</b> in einem neuen Tab</li>
 <li><i class="fas fa-circle-question"></i> <b>Hilfe</b> – diese Seite inkl. Changelog</li>
-'.($showAdmin ? '<li><i class="fas fa-wrench"></i> <b>Admin</b> – Verwaltung (Konfiguration, Backup, Updater, Log) unter Mehr</li>' : '').'
+'.($showAdmin ? '<li><i class="fas fa-wrench"></i> <b>Admin</b> – Verwaltung (Konfiguration, Backup, Updater, Log'.($canEditPermissions ? ', Berechtigungen' : '').') unter Mehr</li>' : '').'
 <li><i class="fas fa-sign-out-alt"></i> <b>Ausloggen</b> – Sitzung beenden</li>
 </ul>
 '
@@ -80,7 +84,7 @@ $sections[] = array(
     'id' => 'login-sso',
     'title' => 'Login &amp; Meldeliste',
     'body' => '
-<p>Die Mitgliederverwaltung teilt die Benutzerkonten mit der Meldeliste. Zugang nur mit Melde-Recht <b>Mitgliederverwaltung</b>. Typischer Einstieg: SSO-Link aus der Meldeliste oder Login mit denselben Zugangsdaten.</p>
+<p>Die Mitgliederverwaltung teilt die Benutzerkonten mit der Meldeliste. <b>Modulzugang</b> (Login) nur mit Melde-Recht Mitgliederverwaltung. <b>In-App-Rechte</b> setzt du unter Admin → Berechtigungen (<code>mit_Permissions</code>): Nutzerdaten lesen, schreiben, Rechte verwalten.</p>
 '.($meldeUrl !== '' ? '<p>Über den Nav-Eintrag <b>Meldeliste</b> kehrst du zurück: <a href="'.htmlspecialchars($meldeUrl, ENT_QUOTES, 'UTF-8').'">'.htmlspecialchars($meldeUrl, ENT_QUOTES, 'UTF-8').'</a></p>' : '').'
 '.($masterPage !== '' ? '<p>Die Vereinshomepage erreichst du über das Logo oder: <a href="'.htmlspecialchars($masterPage, ENT_QUOTES, 'UTF-8').'" target="_blank" rel="noopener noreferrer">'.htmlspecialchars($masterPage, ENT_QUOTES, 'UTF-8').'</a></p>' : '').'
 '
@@ -92,10 +96,13 @@ $sections[] = array(
     'visible' => $showAdmin,
     'body' => '
 <ul class="help-list">
+'.($canEditPermissions ? '
+<li><b>Berechtigungen</b> – Matrix für MIT-Rechte (lesen/schreiben Nutzerdaten, Rechte verwalten). Melde-Admin darf beim Erststart die Matrix öffnen, bis jemand „Berechtigungen verwalten“ hat</li>
+' : '').'
 '.($canEditConfig ? '
 <li><b>Konfiguration</b> – Site-Name, URLs, Farben und Farbschema; Änderungen erscheinen im Log. Schema-Version und Schema-Metadaten werden hier nicht bearbeitet</li>
 <li><b>Backup</b> – ZIP mit Versionsinfo und SQL nur für Mitgliedschafts-Tabellen (<code>mit_*</code>), nicht Melde-Identity. Download im Browser; Restore mit CSRF und Bestätigung <code>RESTORE</code>; CLI <code>php scripts/restoreBackup.php … --yes</code>. Erfolgreiche Downloads erscheinen im Log</li>
-<li><b>Updater</b> – Software-Update vom Remote und Datenbank prüfen/reparieren; der Bericht listet nur Änderungen und Probleme</li>
+<li><b>Updater</b> – Software-Update vom Remote und Datenbank prüfen/reparieren; der Bericht listet nur Änderungen und Probleme. Nach Deploy ggf. „Datenbank reparieren“ für Schema v4 (<code>mit_Permissions</code>)</li>
 ' : '').'
 '.($canShowLog ? '
 <li><b>Log</b> – Anwendungsprotokoll (Server-Suche, Live-Aktualisierung, Nachladen beim Scrollen)</li>

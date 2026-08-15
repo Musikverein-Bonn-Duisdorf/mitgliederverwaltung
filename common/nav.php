@@ -62,15 +62,17 @@ if($isAdminNav) {
     <a class="app-nav-item <?php getPage('home', 'system'); ?>" href="<?php echo htmlspecialchars($homeUrl, ENT_QUOTES, 'UTF-8'); ?>" title="Übersicht">
       <i class="fas fa-home" aria-hidden="true"></i><span class="nav-label">Übersicht</span>
     </a>
-    <a class="app-nav-item <?php getPage('members', 'system'); ?>" href="members.php" title="Mitglieder">
+<?php if(hasPermission('perm_showUsers')) { ?>
+    <a class="app-nav-item <?php getPage('members', 'nutzer'); ?>" href="members.php" title="Mitglieder">
       <i class="fas fa-users" aria-hidden="true"></i><span class="nav-label">Mitglieder</span>
     </a>
-    <a class="app-nav-item <?php getPage('sepa', 'system'); ?>" href="sepa.php" title="SEPA">
+    <a class="app-nav-item <?php getPage('sepa', 'nutzer'); ?>" href="sepa.php" title="SEPA">
       <i class="fas fa-university" aria-hidden="true"></i><span class="nav-label">SEPA</span>
     </a>
-    <a class="app-nav-item <?php getPage('documents', 'system'); ?>" href="documents.php" title="Dokumente">
+    <a class="app-nav-item <?php getPage('documents', 'nutzer'); ?>" href="documents.php" title="Dokumente">
       <i class="fas fa-file-alt" aria-hidden="true"></i><span class="nav-label">Dokumente</span>
     </a>
+<?php } ?>
 <?php if($meldeUrl !== '') { ?>
     <a class="app-nav-item app-nav-item--secondary <?php echo htmlspecialchars(navGroupClass('system'), ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($meldeUrl, ENT_QUOTES, 'UTF-8'); ?>" title="Meldeliste">
       <i class="fas fa-clipboard-list" aria-hidden="true"></i><span class="nav-label">Meldeliste</span>
@@ -104,13 +106,16 @@ if($isAdminNav) {
         <div class="admin-nav app-nav-admin">
           <div class="app-nav-admin-title"><i class="fas fa-wrench" aria-hidden="true"></i><span class="nav-label">Admin</span></div>
           <div class="w3-bar-block <?php echo $navAdminColor; ?>">
-            <div class="w3-dropdown-hover w3-mobile admin-nav-group<?php echo adminNavGroupActiveClass(array('updater', 'log', 'config', 'backup')); ?>">
+            <div class="w3-dropdown-hover w3-mobile admin-nav-group<?php echo adminNavGroupActiveClass(array('updater', 'log', 'config', 'backup', 'permissions')); ?>">
               <button type="button" class="w3-button w3-mobile w3-block w3-left-align <?php echo htmlspecialchars(navGroupClass('system'), ENT_QUOTES, 'UTF-8'); ?>">Verwaltung <i class="fas fa-caret-right admin-nav-caret"></i></button>
               <div class="w3-dropdown-content w3-bar-block w3-card-4 <?php echo $navAdminColor; ?> w3-mobile">
                 <a title="Updater" href="updater.php" class="w3-bar-item w3-button w3-mobile <?php getAdminPage('updater'); ?>"><i class="fas fa-code-branch"></i> Updater</a>
                 <a title="Konfiguration" href="config-menu.php" class="w3-bar-item w3-button w3-mobile <?php getAdminPage('config'); ?>"><i class="fas fa-cogs"></i> Konfiguration</a>
                 <a title="Backup" href="backup.php" class="w3-bar-item w3-button w3-mobile <?php getAdminPage('backup'); ?>"><i class="fas fa-file-archive"></i> Backup</a>
                 <a title="Log" href="log.php" class="w3-bar-item w3-button w3-mobile <?php getAdminPage('log'); ?>"><i class="fas fa-poll"></i> Log</a>
+<?php if(hasPermission('perm_editPermissions')) { ?>
+                <a title="Berechtigungen" href="permissions.php" class="w3-bar-item w3-button w3-mobile <?php getAdminPage('permissions'); ?>"><i class="fas fa-lock"></i> Berechtigungen</a>
+<?php } ?>
               </div>
             </div>
           </div>

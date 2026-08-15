@@ -5,14 +5,15 @@ $_SESSION['page'] = 'home';
 $_SESSION['adminpage'] = false;
 include 'common/header.php';
 
-$nMembers = count(Membership::listAll());
-$nSepa = count(SepaMandate::listAll());
-$nDocs = count(Document::listAll());
+$nMembers = hasPermission('perm_showUsers') ? count(Membership::listAll()) : 0;
+$nSepa = hasPermission('perm_showUsers') ? count(SepaMandate::listAll()) : 0;
+$nDocs = hasPermission('perm_showUsers') ? count(Document::listAll()) : 0;
 
 adminListPageBegin('Mitgliederverwaltung', 'Übersicht');
 adminListChromeClose(false);
 ?>
 <div id="Liste">
+<?php if(hasPermission('perm_showUsers')) { ?>
   <a class="list-row w3-padding w3-border-bottom w3-block" href="members.php" data-search="mitglieder mitgliedschaften">
     <div class="w3-row">
       <div class="w3-col l8 m8 s8"><i class="fas fa-users" aria-hidden="true"></i> Mitglieder</div>
@@ -31,6 +32,11 @@ adminListChromeClose(false);
       <div class="w3-col l4 m4 s4 w3-right-align"><?php echo (int)$nDocs; ?></div>
     </div>
   </a>
+<?php } else { ?>
+  <div class="w3-panel w3-padding <?php echo h($optionsDB['colorLogWarning']); ?>">
+    Eingeloggt, aber ohne Recht „Nutzerdaten lesen“. Bitte einen Admin um Rechte in <b>Berechtigungen</b> bitten.
+  </div>
+<?php } ?>
 </div>
 <?php
 adminListPageEnd();

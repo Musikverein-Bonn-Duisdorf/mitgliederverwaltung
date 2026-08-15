@@ -19,6 +19,7 @@ include __DIR__.'/../libs/SepaMandate.php';
 include __DIR__.'/../libs/Document.php';
 include __DIR__.'/../libs/ssoTicket.php';
 include __DIR__.'/../libs/identityPermissions.php';
+include __DIR__.'/../libs/permissions.php';
 include __DIR__.'/../libs/log.php';
 include __DIR__.'/../libs/listChunk.php';
 $optionsDB = loadconfig();

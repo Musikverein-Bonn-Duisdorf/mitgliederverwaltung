@@ -4,6 +4,7 @@ mitConfigureSession();
 $_SESSION['page'] = 'members';
 $_SESSION['adminpage'] = false;
 include 'common/header.php';
+requirePermission('perm_showUsers');
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $membership = new Membership();

@@ -20,9 +20,11 @@ Verkaufbare / installierbare Module:
 - Feature-Flags / Lizenz-Hook später andockbar (`modules.enabled` o. Ä.).
 - Melde-Eingriffe in der Parallelphase minimal (SSO-Hook, später UserVoice).
 - Modul-Zugang: Melde-Flag `perm_accessMitgliederverwaltung` (Login + SSO-Redeem in MIT; Ausstellung auch in Melde-`sso.php`).
+- In-App-Rechte: eigene Matrix `mit_Permissions` / `permissions.php` (lesen/schreiben Nutzerdaten, Rechte verwalten). Melde-Ops-Flags weiter für Config/Log bis eigene System-Rechte folgen.
 
 ## Ops (eigenes Modul)
 
+- `permissions.php` / `savePermission.php`: MIT-Rechte-Matrix (`mit_Permissions`).
 - `updater.php` / `update.php`: Git-Check/Pull + Schema prüfen/reparieren nur für `mit_*`.
 - `config-menu.php` / `savePara.php`: globale Einstellungen + Farbschemata (`mit_config`).
 - `backup.php` / `libs/backup.php`: ZIP-Download + Restore nur für `mit_*` (nie Melde-Identity).

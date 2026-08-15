@@ -149,7 +149,7 @@ function clearAuthSession() {
 }
 
 /**
- * Admin = Melde User.Admin OR any Melde ops permission (not access-only).
+ * Admin = Melde User.Admin OR Melde ops flags OR any mit_Permissions flag.
  * @param int $userId
  * @param bool $legacyAdmin User.Admin column
  * @return bool
@@ -161,6 +161,12 @@ function computeAdminForUser($userId, $legacyAdmin = false) {
     $userId = (int)$userId;
     if($userId < 1) {
         return false;
+    }
+    if(class_exists('Permissions') && Permissions::loadByUser($userId)->isAdmin()) {
+        return true;
+    }
+    if(class_exists('Permissions') && Permissions::bootstrapEditAllowed($userId)) {
+        return true;
     }
     return IdentityPermissions::loadForUser($userId)->isAdmin();
 }
@@ -473,13 +479,24 @@ function logMessageHasChanges($message) {
 }
 
 /**
- * Non-fatal Melde permission check. User.Admin always passes for ops keys.
- * @param string $perm e.g. perm_editConfig
+ * Non-fatal permission check.
+ * MIT keys (mit_Permissions): no Melde Admin bypass — only assigned MIT rights (+ bootstrap for editPermissions).
+ * Melde ops keys (config/log): Melde User.Admin or Melde Permissions.
+ * @param string $perm e.g. perm_showUsers / perm_editConfig
  * @return bool
  */
 function hasPermission($perm = '') {
     $uid = isset($_SESSION['userid']) ? (int)$_SESSION['userid'] : 0;
     if($uid < 1) {
+        return false;
+    }
+    if($perm !== '' && class_exists('Permissions') && Permissions::isMitKey($perm)) {
+        if(Permissions::loadByUser($uid)->getPermission($perm)) {
+            return true;
+        }
+        if($perm === 'perm_editPermissions' && Permissions::bootstrapEditAllowed($uid)) {
+            return true;
+        }
         return false;
     }
     $sql = sprintf(
@@ -499,8 +516,8 @@ function hasPermission($perm = '') {
 }
 
 /**
- * Require a Melde permission (personal row + group PermissionSpec). User.Admin always passes.
- * @param string $perm e.g. perm_editConfig
+ * Require a permission (MIT mit_Permissions or Melde ops). Exits on deny.
+ * @param string $perm e.g. perm_showUsers / perm_editConfig
  */
 function requirePermission($perm = 'perm_editConfig') {
     if(!loggedIn()) {

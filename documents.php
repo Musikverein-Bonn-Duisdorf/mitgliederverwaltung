@@ -4,12 +4,14 @@ mitConfigureSession();
 $_SESSION['page'] = 'documents';
 $_SESSION['adminpage'] = false;
 include 'common/header.php';
+requirePermission('perm_showUsers');
 
 $saved = false;
 $error = '';
 $prefillUser = isset($_GET['user']) ? (int)$_GET['user'] : 0;
 
 if(isset($_POST['save_document'])) {
+    requirePermission('perm_editUsers');
     $doc = new Document();
     $doc->User = (int)($_POST['user'] ?? 0);
     $doc->DocType = trim((string)($_POST['doctype'] ?? ''));
@@ -35,9 +37,11 @@ if($saved) {
 elseif($error !== '') {
     echo '<div class="w3-panel '.h($optionsDB['colorLogError']).'">'.h($error).'</div>';
 }
+$canEditUsers = hasPermission('perm_editUsers');
 ?>
+<?php if($canEditUsers) { ?>
 <div class="profile-shell w3-margin-bottom">
-  <header class="profile-hero admin-list-hero admin-list-hero--system">
+  <header class="profile-hero admin-list-hero admin-list-hero--nutzer">
     <div class="profile-hero-text">
       <p class="profile-kicker">Neu</p>
       <h2 class="profile-title">Dokument anlegen</h2>
@@ -65,6 +69,7 @@ elseif($error !== '') {
     </div>
   </form>
 </div>
+<?php } ?>
 <div id="Liste">
 <?php foreach($documents as $doc) {
     $u = new IdentityUser();
