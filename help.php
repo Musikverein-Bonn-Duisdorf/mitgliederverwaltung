@@ -1,0 +1,28 @@
+<?php
+require_once __DIR__.'/libs/sessionBootstrap.php';
+mitConfigureSession();
+$_SESSION['page'] = 'help';
+$_SESSION['adminpage'] = false;
+include 'common/header.php';
+
+adminListPageBegin('Hilfe', 'Hilfe & Info');
+?>
+<div class="w3-row help-layout">
+  <div class="w3-col l7 m12 s12 help-col-guide">
+    <div class="w3-container w3-margin-top">
+      <?php echo render('help/guide', array(
+          'optionsDB' => $GLOBALS['optionsDB'],
+      )); ?>
+    </div>
+  </div>
+  <div class="w3-col l5 m12 s12 help-col-changelog" id="help-changelog">
+    <div class="w3-container w3-margin-top">
+      <h2>Changelog</h2>
+      <?php echo renderChangelogHtml(); ?>
+    </div>
+  </div>
+</div>
+<?php
+adminListPageEnd();
+include 'common/footer.php';
+?>

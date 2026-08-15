@@ -89,6 +89,7 @@ adminListPageBegin('System', 'Backup');
       Prefix: <code><?php echo htmlspecialchars($manifest['dbprefix'], ENT_QUOTES, 'UTF-8'); ?></code>
     </p>
     <p class="w3-small">Backup enthält nur Tabellen mit diesem Prefix — keine Melde-Identity-Tabellen.</p>
+    <p><a href="help.php#help-admin-verwaltung">Hilfe: Backup</a></p>
   </div>
 
   <div class="w3-card w3-padding w3-margin-bottom">

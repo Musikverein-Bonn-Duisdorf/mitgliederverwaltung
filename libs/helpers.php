@@ -437,4 +437,231 @@ function denyAccess($message = 'Keine Berechtigung für diesen Bereich.') {
     }
     exit;
 }
+
+/**
+ * Run a git command in the repo root; return stdout or null on failure.
+ * @param string $args Arguments after `git` (already escaped where needed)
+ * @return string|null
+ */
+function gitRepoOutput($args) {
+    $root = dirname(__DIR__);
+    if(!is_dir($root.'/.git') && !is_file($root.'/.git')) {
+        return null;
+    }
+    $cmd = 'git -C '.escapeshellarg($root).' '.$args.' 2>/dev/null';
+    $out = array();
+    $code = 1;
+    exec($cmd, $out, $code);
+    if($code !== 0) {
+        return null;
+    }
+    return implode("\n", $out);
+}
+
+/** Short git HEAD hash, or null if unavailable. */
+function getGitHeadShort() {
+    $head = gitRepoOutput('rev-parse --short=7 HEAD');
+    if($head === null || $head === '') {
+        return null;
+    }
+    return trim($head);
+}
+
+/** Full hash of the git commit that created the current VERSION string, or null. */
+function getGitReleaseCommitHash() {
+    $version = isset($GLOBALS['version']['String']) ? (string)$GLOBALS['version']['String'] : '';
+    if($version === '') {
+        return null;
+    }
+    $hash = gitRepoOutput('log -1 --fixed-strings --grep='.escapeshellarg('release '.$version).' --pretty=%H');
+    if($hash === null || $hash === '') {
+        return null;
+    }
+    return trim(explode("\n", $hash)[0]);
+}
+
+/** True when working tree HEAD is not exactly the release commit for VERSION. */
+function isUnreleasedGitCheckout() {
+    $head = gitRepoOutput('rev-parse HEAD');
+    $release = getGitReleaseCommitHash();
+    if($head === null || $release === null) {
+        return false;
+    }
+    return trim($head) !== trim($release);
+}
+
+/**
+ * Commit subjects since the VERSION release commit (for unreleased changelog row).
+ * @return string[]
+ */
+function collectUnreleasedGitNotes() {
+    $release = getGitReleaseCommitHash();
+    if($release === null) {
+        return array();
+    }
+    $log = gitRepoOutput('log --pretty=%s '.escapeshellarg($release.'..HEAD'));
+    if($log === null || $log === '') {
+        return array();
+    }
+    $notes = array();
+    $seen = array();
+    foreach(explode("\n", $log) as $subj) {
+        $subj = trim($subj);
+        if($subj === '' || isset($seen[$subj])) {
+            continue;
+        }
+        if(preg_match('/^Merge /i', $subj)) {
+            continue;
+        }
+        if(preg_match('/^release\s+/i', $subj)) {
+            continue;
+        }
+        if(preg_match('/^Sync release/i', $subj)) {
+            continue;
+        }
+        $seen[$subj] = true;
+        $notes[] = $subj;
+        if(count($notes) >= 20) {
+            break;
+        }
+    }
+    return $notes;
+}
+
+/**
+ * Parse CHANGELOG.md into structured release entries.
+ * @return array<int,array{version:string,date:string,notes:string[],unreleased?:bool}>
+ */
+function parseChangelogEntries() {
+    $path = dirname(__DIR__).'/CHANGELOG.md';
+    if(!is_file($path)) {
+        return array();
+    }
+    $lines = file($path, FILE_IGNORE_NEW_LINES);
+    if($lines === false) {
+        return array();
+    }
+    $entries = array();
+    $current = null;
+    foreach($lines as $line) {
+        $line = rtrim($line);
+        if(preg_match('/^##\s+(\S+)\s+\((\d{4}-\d{2}-\d{2})\)\s*$/', $line, $m)) {
+            if($current !== null) {
+                $entries[] = $current;
+            }
+            $current = array(
+                'version' => $m[1],
+                'date' => $m[2],
+                'notes' => array(),
+                'unreleased' => false
+            );
+            continue;
+        }
+        if($current === null) {
+            continue;
+        }
+        if(preg_match('/^-\s+(.+)$/', $line, $m)) {
+            $current['notes'][] = $m[1];
+        }
+    }
+    if($current !== null) {
+        $entries[] = $current;
+    }
+    return $entries;
+}
+
+/**
+ * Render CHANGELOG.md as an HTML table for the Hilfe page.
+ * Prepends an unreleased row when HEAD is ahead of the VERSION release commit.
+ */
+function renderChangelogHtml() {
+    $entries = parseChangelogEntries();
+    $currentVersion = isset($GLOBALS['version']['String']) ? (string)$GLOBALS['version']['String'] : '';
+    $unreleased = isUnreleasedGitCheckout();
+    $headShort = $unreleased ? getGitHeadShort() : null;
+
+    if($unreleased) {
+        $notes = collectUnreleasedGitNotes();
+        if(!$notes) {
+            $notes = array('Noch nicht released (Commit '.($headShort ? $headShort : 'dev').')');
+        }
+        array_unshift($entries, array(
+            'version' => $headShort ? ('unreleased-'.$headShort) : 'unreleased',
+            'date' => date('Y-m-d'),
+            'notes' => $notes,
+            'unreleased' => true
+        ));
+    }
+
+    if(!$entries) {
+        return '<p class="w3-text-gray">Kein Changelog vorhanden.</p>';
+    }
+
+    $html = '<div class="help-changelog-wrap">'."\n";
+    $html .= '<table class="w3-table w3-striped w3-bordered help-changelog-table">'."\n";
+    $html .= '<thead><tr>'
+        .'<th>Version</th>'
+        .'<th>Datum</th>'
+        .'<th>&Auml;nderungen</th>'
+        .'</tr></thead>'."\n<tbody>\n";
+    foreach($entries as $entry) {
+        $notes = $entry['notes'];
+        if(!$notes) {
+            $notes = array('(keine weiteren Notizen)');
+        }
+        $isUnreleasedRow = !empty($entry['unreleased']);
+        $isCurrent = $isUnreleasedRow
+            ? true
+            : (!$unreleased && $currentVersion !== '' && $entry['version'] === $currentVersion);
+        $rowClass = '';
+        if($isCurrent && $isUnreleasedRow) {
+            $rowClass = ' class="help-changelog-current help-changelog-unreleased"';
+        }
+        elseif($isCurrent) {
+            $rowClass = ' class="help-changelog-current"';
+        }
+        elseif($isUnreleasedRow) {
+            $rowClass = ' class="help-changelog-unreleased"';
+        }
+        $html .= '<tr'.$rowClass.'>';
+        $html .= '<td class="help-changelog-version"><code>'
+            .htmlspecialchars($entry['version'], ENT_QUOTES, 'UTF-8')
+            .'</code>';
+        if($isCurrent && $isUnreleasedRow) {
+            $html .= ' <span class="help-changelog-badge help-changelog-badge-unreleased">nicht released</span>';
+        }
+        elseif($isCurrent) {
+            $html .= ' <span class="help-changelog-badge">aktuell</span>';
+        }
+        $html .= '</td>';
+        $html .= '<td class="help-changelog-date">'
+            .htmlspecialchars($entry['date'], ENT_QUOTES, 'UTF-8')
+            .'</td>';
+        $html .= '<td class="help-changelog-notes"><ul class="help-changelog-list">';
+        foreach($notes as $note) {
+            $html .= '<li>'.htmlspecialchars($note, ENT_QUOTES, 'UTF-8').'</li>';
+        }
+        $html .= '</ul></td></tr>'."\n";
+    }
+    $html .= "</tbody></table>\n</div>\n";
+    return $html;
+}
+
+/**
+ * Render a view under views/{name}.php
+ * @param string $view Relative path without .php (e.g. help/guide)
+ * @param array $vars Variables extracted into the view scope
+ * @return string
+ */
+function render($view, $vars = array()) {
+    $path = dirname(__DIR__).'/views/'.$view.'.php';
+    if(!is_file($path)) {
+        trigger_error('View not found: '.$view, E_USER_WARNING);
+        return '';
+    }
+    extract($vars, EXTR_SKIP);
+    ob_start();
+    include $path;
+    return ob_get_clean();
+}
 ?>

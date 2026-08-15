@@ -76,6 +76,9 @@ if($isAdminNav) {
       <i class="fas fa-clipboard-list" aria-hidden="true"></i><span class="nav-label">Meldeliste</span>
     </a>
 <?php } ?>
+    <a class="app-nav-item app-nav-item--secondary <?php getPage('help', 'system'); ?>" href="help.php" title="Hilfe">
+      <i class="fas fa-circle-question" aria-hidden="true"></i><span class="nav-label">Hilfe</span>
+    </a>
   </div>
 
   <div class="app-nav-more-wrap">
@@ -94,6 +97,9 @@ if($isAdminNav) {
           <i class="fas fa-clipboard-list" aria-hidden="true"></i><span class="nav-label">Meldeliste</span>
         </a>
 <?php } ?>
+        <a class="app-nav-item app-nav-more-only-mobile <?php getPage('help', 'system'); ?>" href="help.php" title="Hilfe">
+          <i class="fas fa-circle-question" aria-hidden="true"></i><span class="nav-label">Hilfe</span>
+        </a>
 <?php if($showAdminNav) { ?>
         <div class="admin-nav app-nav-admin">
           <div class="app-nav-admin-title"><i class="fas fa-wrench" aria-hidden="true"></i><span class="nav-label">Admin</span></div>

@@ -24,5 +24,8 @@ EOF
 
 git add VERSION HASH
 git add common/version.php
+./scripts/generateChangelog.sh --pending "$VERSION"
+git add CHANGELOG.md
 git commit -m "release $VERSION"
 echo -e "new commit generated"
+echo -e "Reminder:\tUpdate views/help/guide.php if this release changes user-facing workflows."
