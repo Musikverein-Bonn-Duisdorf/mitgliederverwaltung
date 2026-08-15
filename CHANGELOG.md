@@ -2,6 +2,10 @@
 
 Automatisch aus Git-Release-Commits erzeugt.
 
+## 2026-08-16-11c24 (2026-08-16)
+
+- Add post-hoc correction, retention reminders, and jubilee calendar.
+
 ## 2026-08-15-28ccc (2026-08-15)
 
 - Fix membership scan upload: find file input outside the form.
