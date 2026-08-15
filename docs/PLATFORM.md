@@ -19,3 +19,7 @@ Verkaufbare / installierbare Module:
 - White-Label: Vereinsname/URLs/Branding in Config, nicht hardcoded.
 - Feature-Flags / Lizenz-Hook später andockbar (`modules.enabled` o. Ä.).
 - Melde-Eingriffe in der Parallelphase minimal (SSO-Hook, später UserVoice).
+
+## UI-Shell (Melde-Parität)
+
+Siehe Pointer [`docs/UI-SHELL.md`](UI-SHELL.md) → Meldeliste **master** [`docs/UI-SHELL.md`](https://github.com/Musikverein-Bonn-Duisdorf/meldeliste/blob/master/docs/UI-SHELL.md). Keine lokale Kopie des Vertrags.
