@@ -3,13 +3,26 @@ require_once __DIR__.'/libs/sessionBootstrap.php';
 mitConfigureSession();
 $_SESSION['page'] = 'config';
 $_SESSION['adminpage'] = true;
-include 'common/header.php';
-requirePermission('perm_editConfig');
+
+// Save must run before header.php so PRG Location headers can be sent.
+include_once 'common/include.php';
+mysqli_select_db($GLOBALS['conn'], $sql['database']) or die(mysqli_error($GLOBALS['conn']));
+requireLoggedInOrRedirect();
+enforceMitgliederverwaltungAccess();
+if(!loggedIn()) {
+    header('Location: login.php');
+    exit;
+}
+if(!hasPermission('perm_editConfig')) {
+    include 'common/header.php';
+    denyAccess('Keine Berechtigung für die Konfiguration.');
+}
 
 $conn = $GLOBALS['conn'];
 
 if(isset($_POST['save'])) {
     if(!csrf_verify(isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '')) {
+        include 'common/header.php';
         denyAccess('Ungültiges Sicherheits-Token. Bitte Seite neu laden und erneut speichern.');
     }
     $sqlQuery = sprintf('SELECT * FROM `%sconfig`;', $GLOBALS['dbprefix']);
@@ -95,6 +108,9 @@ if(isset($_POST['save'])) {
     setFlash('success', 'Einstellungen gespeichert.');
     redirectAfterPost('config-menu.php');
 }
+
+include 'common/header.php';
+requirePermission('perm_editConfig');
 
 $flash = getFlash();
 ?>
