@@ -37,12 +37,12 @@ case 'change':
         break;
     }
 
-    $sql = sprintf(
+    $sqlQuery = sprintf(
         'SELECT `Parameter`, `Type`, `Value` FROM `%sconfig` WHERE `Parameter` = "%s" LIMIT 1;',
         $GLOBALS['dbprefix'],
         mysqli_real_escape_string($conn, $para)
     );
-    $dbr = mysqli_query($conn, $sql);
+    $dbr = mysqli_query($conn, $sqlQuery);
     sqlerror();
     $row = $dbr ? mysqli_fetch_assoc($dbr) : null;
     if(!$row) {
@@ -78,13 +78,13 @@ case 'change':
         break;
     }
     $oldValue = (string)$row['Value'];
-    $sql = sprintf(
+    $sqlQuery = sprintf(
         'UPDATE `%sconfig` SET `Value` = "%s" WHERE `Parameter` = "%s";',
         $GLOBALS['dbprefix'],
         mysqli_real_escape_string($conn, $value),
         mysqli_real_escape_string($conn, $para)
     );
-    $dbr2 = mysqli_query($conn, $sql);
+    $dbr2 = mysqli_query($conn, $sqlQuery);
     sqlerror();
     if($dbr2) {
         logConfigChange($para, $oldValue, $value, $row['Type']);

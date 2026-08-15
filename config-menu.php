@@ -1,25 +1,25 @@
 <?php
-ob_start();
 require_once __DIR__.'/libs/sessionBootstrap.php';
 mitConfigureSession();
 $_SESSION['page'] = 'config';
 $_SESSION['adminpage'] = true;
-
-include_once 'common/include.php';
-mysqli_select_db($GLOBALS['conn'], $sql['database']) or die(mysqli_error($GLOBALS['conn']));
+include 'common/header.php';
 requirePermission('perm_editConfig');
+
+$conn = $GLOBALS['conn'];
 
 if(isset($_POST['save'])) {
     if(!csrf_verify(isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '')) {
         denyAccess('Ungültiges Sicherheits-Token. Bitte Seite neu laden und erneut speichern.');
     }
-    $sql = sprintf('SELECT * FROM `%sconfig`;', $GLOBALS['dbprefix']);
-    $dbr = mysqli_query($conn, $sql);
+    $sqlQuery = sprintf('SELECT * FROM `%sconfig`;', $GLOBALS['dbprefix']);
+    $dbr = mysqli_query($conn, $sqlQuery);
     sqlerror();
     while($row = mysqli_fetch_array($dbr)) {
         if($row['Type'] === 'internal' || mitIsHiddenConfigParam($row['Parameter'])) {
             continue;
         }
+        $paramEsc = mysqli_real_escape_string($conn, (string)$row['Parameter']);
         switch($row['Type']) {
         case 'days':
             $val = 0;
@@ -31,13 +31,13 @@ if(isset($_POST['save'])) {
             if($val == $row['Value']) {
                 break;
             }
-            $sql = sprintf(
+            $sqlQuery = sprintf(
                 'UPDATE `%sconfig` SET `Value` = "%s" WHERE `Parameter` = "%s";',
                 $GLOBALS['dbprefix'],
-                $val,
-                $row['Parameter']
+                (int)$val,
+                $paramEsc
             );
-            $dbr2 = mysqli_query($conn, $sql);
+            $dbr2 = mysqli_query($conn, $sqlQuery);
             sqlerror();
             if($dbr2) {
                 logConfigChange($row['Parameter'], $row['Value'], $val, $row['Type']);
@@ -55,13 +55,13 @@ if(isset($_POST['save'])) {
                 if($newVal == $row['Value']) {
                     break;
                 }
-                $sql = sprintf(
+                $sqlQuery = sprintf(
                     'UPDATE `%sconfig` SET `Value` = "%s" WHERE `Parameter` = "%s";',
                     $GLOBALS['dbprefix'],
                     mysqli_real_escape_string($conn, $newVal),
-                    $row['Parameter']
+                    $paramEsc
                 );
-                $dbr2 = mysqli_query($conn, $sql);
+                $dbr2 = mysqli_query($conn, $sqlQuery);
                 sqlerror();
                 if($dbr2) {
                     logConfigChange($row['Parameter'], $row['Value'], $newVal, $row['Type']);
@@ -77,13 +77,13 @@ if(isset($_POST['save'])) {
                 if($newVal == $row['Value']) {
                     break;
                 }
-                $sql = sprintf(
+                $sqlQuery = sprintf(
                     'UPDATE `%sconfig` SET `Value` = "%s" WHERE `Parameter` = "%s";',
                     $GLOBALS['dbprefix'],
                     mysqli_real_escape_string($conn, $newVal),
-                    $row['Parameter']
+                    $paramEsc
                 );
-                $dbr2 = mysqli_query($conn, $sql);
+                $dbr2 = mysqli_query($conn, $sqlQuery);
                 sqlerror();
                 if($dbr2) {
                     logConfigChange($row['Parameter'], $row['Value'], $newVal, $row['Type']);
@@ -92,12 +92,11 @@ if(isset($_POST['save'])) {
             break;
         }
     }
-    // Reload options so the form shows saved values / colors
-    $optionsDB = loadconfig();
-    $GLOBALS['optionsDB'] = $optionsDB;
+    setFlash('success', 'Einstellungen gespeichert.');
+    redirectAfterPost('config-menu.php');
 }
 
-include 'common/header.php';
+$flash = getFlash();
 ?>
 <script>
 function savePara(Parameter, Value, reload) {
@@ -178,6 +177,9 @@ function resetColorScheme() {
 </script>
 <?php
 adminListPageBegin('System', 'globale Einstellungen');
+if($flash) {
+    echo renderFlashHtml($flash);
+}
 $hover = isset($GLOBALS['optionsDB']['HoverEffect']) && $GLOBALS['optionsDB']['HoverEffect'] !== ''
     ? $GLOBALS['optionsDB']['HoverEffect']
     : 'w3-hover-gray';
@@ -234,8 +236,8 @@ $btnEdit = isset($GLOBALS['optionsDB']['colorBtnEdit']) ? $GLOBALS['optionsDB'][
     <div class="w3-col l4 w3-center"><b>Wert</b></div>
 </div>
 <?php
-$sql = sprintf('SELECT * FROM `%sconfig` ORDER BY `Parameter`;', $GLOBALS['dbprefix']);
-$dbr = mysqli_query($conn, $sql);
+$sqlQuery = sprintf('SELECT * FROM `%sconfig` ORDER BY `Parameter`;', $GLOBALS['dbprefix']);
+$dbr = mysqli_query($conn, $sqlQuery);
 sqlerror();
 while($row = mysqli_fetch_array($dbr)) {
     if($row['Type'] === 'internal' || mitIsHiddenConfigParam($row['Parameter'])) {
