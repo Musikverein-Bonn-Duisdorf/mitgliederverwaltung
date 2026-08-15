@@ -1,6 +1,6 @@
 <?php
 session_start();
-include __DIR__.'/common/include.php';
+include __DIR__.'/include.php';
 ?>
 <!DOCTYPE html>
 <html lang="de">
