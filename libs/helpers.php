@@ -212,8 +212,50 @@ function redirectAfterPost($url) {
 }
 
 /**
+ * Request helper (POST preferred, then GET).
+ * @param string $key
+ * @param mixed $default
+ * @return mixed
+ */
+function mitRequest($key, $default = null) {
+    if(isset($_POST[$key])) {
+        return $_POST[$key];
+    }
+    if(isset($_GET[$key])) {
+        return $_GET[$key];
+    }
+    return $default;
+}
+
+/**
+ * True when a DBupdate log message encodes a real field change (Melde parity).
+ */
+function logMessageHasChanges($message) {
+    $message = (string)$message;
+    if($message === '') {
+        return false;
+    }
+    if(strpos($message, '&rArr;') !== false) {
+        return true;
+    }
+    if(strpos($message, '(vorher:') !== false) {
+        return true;
+    }
+    if(preg_match('/\b(?:Passhash|activeLink)\s+geändert\b/u', $message)) {
+        return true;
+    }
+    if(strpos($message, 'zurückgesetzt') !== false) {
+        return true;
+    }
+    if(strpos($message, 'umbenannt:') !== false) {
+        return true;
+    }
+    return false;
+}
+
+/**
  * Melde-compat: until IdentityPermissions is ported, only User.Admin grants access.
- * @param string $perm e.g. perm_editConfig (ignored except for API shape)
+ * @param string $perm e.g. perm_editConfig / perm_showLog (ignored except for API shape)
  */
 function hasPermission($perm = '') {
     return !empty($_SESSION['admin']);

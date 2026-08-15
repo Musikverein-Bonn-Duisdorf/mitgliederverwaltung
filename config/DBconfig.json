@@ -51,9 +51,9 @@
     },
     "Log": {
         "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
-        "User": {"Type": "int", "Null": "YES", "Default": 0},
         "Timestamp": {"Type": "timestamp", "Default": "CURRENT_TIMESTAMP", "Extra": "DEFAULT_GENERATED"},
-        "Type": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "User": {"Type": "int", "Null": "YES", "Default": 0},
+        "Type": {"Type": "int"},
         "Message": {"Type": "text", "Collation": "utf8mb4_unicode_ci"}
     }
 }

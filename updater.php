@@ -41,6 +41,11 @@ if($gitAction === 'update' || isset($_POST['pull'])) {
         'dbRepaired' => false,
     );
 
+    if($pullOutput['updated']) {
+        $logentry = new Log;
+        $logentry->info('<b>Software Update</b> from version <b>'.$pullOutput['vCurrent'].'</b> to <b>'.$pullOutput['vNew'].'</b>');
+    }
+
     $postPullMgr = new SchemaManager();
     if($postPullMgr->isSchemaOutdated(true)) {
         require_once __DIR__.'/dbintegrity.php';

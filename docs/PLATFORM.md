@@ -23,6 +23,7 @@ Verkaufbare / installierbare Module:
 ## Ops (eigenes Modul)
 
 - `updater.php` / `update.php`: Git-Check/Pull + Schema prüfen/reparieren nur für `mit_*`.
+- `log.php` / `getLog.php` / `getList.php?type=log`: eigenes `mit_Log` (Chunk, Server-Suche, Live-Poll) — Melde-UI-SHELL §2.
 - `install.php`: Erstinstallation (fresh create); Admin-Reparatur bevorzugt über Updater.
 - Backup/Restore: noch nicht portiert (folgt Melde/Archiv-Muster, Prefix `mit_`).
 

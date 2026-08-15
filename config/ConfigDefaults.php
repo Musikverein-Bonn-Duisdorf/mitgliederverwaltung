@@ -156,6 +156,12 @@ function getConfigDefaults() {
             'Description' => 'Gespeicherte Farbschemata (JSON, intern)',
         ),
         array(
+            'Parameter' => 'logListChunkSize',
+            'Value' => '100',
+            'Type' => 'uint',
+            'Description' => 'Log: Einträge pro Scroll-/Poll-Seite (1–500)',
+        ),
+        array(
             'Parameter' => 'SchemaVersion',
             'Value' => '0',
             'Type' => 'int',

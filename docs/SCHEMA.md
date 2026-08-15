@@ -7,6 +7,8 @@
 | SepaMandate | Mandat / IBAN (geschützt) |
 | DebitBatch / DebitItem | Masseneinzug |
 | Document | Beitritts-Scan (nextcloud_path) |
-| config / Log | App-Config + Audit |
+| config / Log | App-Config + Audit (`mit_Log`, Type int, Melde-UI-SHELL) |
 
 Prefix: `mit_`. Identity: `meldeliste_User`.
+
+Schema-Version: siehe `config/schema_version_number.php` (aktuell 2: Log.Type int).
