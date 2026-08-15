@@ -25,6 +25,7 @@
       <?php
         mysqli_select_db($GLOBALS['conn'], $sql['database']) or die(mysqli_error($GLOBALS['conn']));
         tryMeldeSsoLoginFromRequest();
+        enforceMitgliederverwaltungAccess();
         if(!loggedIn()) {
               ?>
               <meta http-equiv="refresh" content="2; URL='login.php'" />

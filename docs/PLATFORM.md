@@ -19,6 +19,7 @@ Verkaufbare / installierbare Module:
 - White-Label: Vereinsname/URLs/Branding in Config, nicht hardcoded.
 - Feature-Flags / Lizenz-Hook später andockbar (`modules.enabled` o. Ä.).
 - Melde-Eingriffe in der Parallelphase minimal (SSO-Hook, später UserVoice).
+- Modul-Zugang: Melde-Flag `perm_accessMitgliederverwaltung` (Login + SSO-Redeem in MIT; Ausstellung auch in Melde-`sso.php`).
 
 ## Ops (eigenes Modul)
 

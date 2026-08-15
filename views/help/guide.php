@@ -17,7 +17,7 @@ $sections[] = array(
     'id' => 'einfuehrung',
     'title' => 'Einführung',
     'body' => '
-<p>Die <b>Mitgliederverwaltung</b> pflegt Mitgliedschaften, SEPA-Mandate und Dokument-Metadaten (Nextcloud-Pfade). Login und Rechte kommen aus der Meldeliste (SSO bzw. dieselben Zugangsdaten).</p>
+<p>Die <b>Mitgliederverwaltung</b> pflegt Mitgliedschaften, SEPA-Mandate und Dokument-Metadaten (Nextcloud-Pfade). Login und Rechte kommen aus der Meldeliste (SSO bzw. dieselben Zugangsdaten). Zugang hat nur, wer in der Meldeliste die Berechtigung <b>Mitgliederverwaltung</b> (<code>perm_accessMitgliederverwaltung</code>) besitzt.</p>
 <p>Über die Navigation erreichst du die Bereiche, die für dich freigeschaltet sind: auf breiten Bildschirmen links mit Text, auf Tablet und Smartphone unten als Leiste (weitere Einträge und Admin unter <b>Mehr</b>). Diese Hilfe zeigt Admin-Abschnitte nur, wenn du Admin bist.</p>
 '
 );
@@ -80,7 +80,7 @@ $sections[] = array(
     'id' => 'login-sso',
     'title' => 'Login &amp; Meldeliste',
     'body' => '
-<p>Die Mitgliederverwaltung teilt die Benutzerkonten mit der Meldeliste. Typischer Einstieg: von der Meldeliste aus per SSO-Link (einmaliges Ticket) oder direktes Login mit denselben Zugangsdaten.</p>
+<p>Die Mitgliederverwaltung teilt die Benutzerkonten mit der Meldeliste. Zugang nur mit Melde-Recht <b>Mitgliederverwaltung</b>. Typischer Einstieg: SSO-Link aus der Meldeliste oder Login mit denselben Zugangsdaten.</p>
 '.($meldeUrl !== '' ? '<p>Über den Nav-Eintrag <b>Meldeliste</b> kehrst du zurück: <a href="'.htmlspecialchars($meldeUrl, ENT_QUOTES, 'UTF-8').'">'.htmlspecialchars($meldeUrl, ENT_QUOTES, 'UTF-8').'</a></p>' : '').'
 '.($masterPage !== '' ? '<p>Die Vereinshomepage erreichst du über das Logo oder: <a href="'.htmlspecialchars($masterPage, ENT_QUOTES, 'UTF-8').'" target="_blank" rel="noopener noreferrer">'.htmlspecialchars($masterPage, ENT_QUOTES, 'UTF-8').'</a></p>' : '').'
 '

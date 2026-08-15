@@ -123,6 +123,86 @@ function getAdminPage($string) {
     }
 }
 
+/**
+ * Melde platform flag: no User.Admin bypass (same as Melde SSO gate).
+ * @param int $userId
+ * @return bool
+ */
+function userMayAccessMitgliederverwaltung($userId) {
+    $userId = (int)$userId;
+    if($userId < 1) {
+        return false;
+    }
+    return IdentityPermissions::loadForUser($userId)->getPermission('perm_accessMitgliederverwaltung');
+}
+
+/** Clear auth fields without destroying the whole session (flash/errors may remain). */
+function clearAuthSession() {
+    unset(
+        $_SESSION['userid'],
+        $_SESSION['Vorname'],
+        $_SESSION['Nachname'],
+        $_SESSION['username'],
+        $_SESSION['admin'],
+        $_SESSION['singleUsePW']
+    );
+}
+
+/**
+ * Admin = Melde User.Admin OR any Melde ops permission (not access-only).
+ * @param int $userId
+ * @param bool $legacyAdmin User.Admin column
+ * @return bool
+ */
+function computeAdminForUser($userId, $legacyAdmin = false) {
+    if($legacyAdmin) {
+        return true;
+    }
+    $userId = (int)$userId;
+    if($userId < 1) {
+        return false;
+    }
+    return IdentityPermissions::loadForUser($userId)->isAdmin();
+}
+
+/** Refresh $_SESSION['admin'] from Melde User.Admin OR Permissions. */
+function refreshSessionAdmin() {
+    if(!isset($_SESSION['userid'])) {
+        return;
+    }
+    $uid = (int)$_SESSION['userid'];
+    if($uid < 1) {
+        return;
+    }
+    $sql = sprintf(
+        "SELECT `Admin` FROM `%sUser` WHERE `Index` = %d LIMIT 1;",
+        identityPrefix(),
+        $uid
+    );
+    $dbr = @mysqli_query($GLOBALS['conn'], $sql);
+    $row = ($dbr) ? mysqli_fetch_assoc($dbr) : null;
+    $legacy = $row ? (bool)$row['Admin'] : false;
+    $_SESSION['admin'] = computeAdminForUser($uid, $legacy);
+}
+
+/**
+ * Drop session if logged in without Melde module access.
+ * @return bool true if still allowed (or not logged in)
+ */
+function enforceMitgliederverwaltungAccess() {
+    if(!loggedIn()) {
+        return true;
+    }
+    $uid = (int)$_SESSION['userid'];
+    if(userMayAccessMitgliederverwaltung($uid)) {
+        refreshSessionAdmin();
+        return true;
+    }
+    clearAuthSession();
+    $GLOBALS['loginDeniedNoAccess'] = true;
+    return false;
+}
+
 function loginUserBySsoId($userId) {
     $userId = (int)$userId;
     if($userId < 1) {
@@ -132,11 +212,16 @@ function loginUserBySsoId($userId) {
     if(!$user->load_by_id($userId) || (int)$user->Deleted === 1) {
         return false;
     }
+    if(!userMayAccessMitgliederverwaltung((int)$user->Index)) {
+        clearAuthSession();
+        $GLOBALS['loginDeniedNoAccess'] = true;
+        return false;
+    }
     $_SESSION['userid'] = (int)$user->Index;
     $_SESSION['Vorname'] = $user->Vorname;
     $_SESSION['Nachname'] = $user->Nachname;
     $_SESSION['username'] = $user->getName();
-    $_SESSION['admin'] = (bool)$user->Admin;
+    $_SESSION['admin'] = computeAdminForUser((int)$user->Index, (bool)$user->Admin);
     $_SESSION['singleUsePW'] = (bool)$user->singleUsePW;
     return true;
 }
@@ -153,7 +238,8 @@ function tryMeldeSsoLoginFromRequest() {
 }
 
 function validateUser($login, $password) {
-    $_SESSION['userid'] = 0;
+    clearAuthSession();
+    $GLOBALS['loginDeniedNoAccess'] = false;
     $login = trim((string)$login);
     if($login === '' || $password === null || $password === '') {
         return false;
@@ -165,11 +251,16 @@ function validateUser($login, $password) {
     if(!password_verify((string)$password, (string)$user->Passhash)) {
         return false;
     }
+    if(!userMayAccessMitgliederverwaltung((int)$user->Index)) {
+        clearAuthSession();
+        $GLOBALS['loginDeniedNoAccess'] = true;
+        return false;
+    }
     $_SESSION['userid'] = (int)$user->Index;
     $_SESSION['Vorname'] = $user->Vorname;
     $_SESSION['Nachname'] = $user->Nachname;
     $_SESSION['username'] = $user->getName();
-    $_SESSION['admin'] = (bool)$user->Admin;
+    $_SESSION['admin'] = computeAdminForUser((int)$user->Index, (bool)$user->Admin);
     $_SESSION['singleUsePW'] = (bool)$user->singleUsePW;
     return true;
 }
@@ -382,16 +473,34 @@ function logMessageHasChanges($message) {
 }
 
 /**
- * Melde-compat: until IdentityPermissions is ported, only User.Admin grants access.
- * @param string $perm e.g. perm_editConfig / perm_showLog (ignored except for API shape)
+ * Non-fatal Melde permission check. User.Admin always passes for ops keys.
+ * @param string $perm e.g. perm_editConfig
+ * @return bool
  */
 function hasPermission($perm = '') {
-    return !empty($_SESSION['admin']);
+    $uid = isset($_SESSION['userid']) ? (int)$_SESSION['userid'] : 0;
+    if($uid < 1) {
+        return false;
+    }
+    $sql = sprintf(
+        "SELECT `Admin` FROM `%sUser` WHERE `Index` = %d LIMIT 1;",
+        identityPrefix(),
+        $uid
+    );
+    $dbr = @mysqli_query($GLOBALS['conn'], $sql);
+    $row = ($dbr) ? mysqli_fetch_assoc($dbr) : null;
+    if($row && !empty($row['Admin'])) {
+        return true;
+    }
+    if($perm === '') {
+        return computeAdminForUser($uid, false);
+    }
+    return IdentityPermissions::loadForUser($uid)->getPermission($perm);
 }
 
 /**
- * Require Melde User.Admin (session). Later: perm_editConfig via IdentityPermissions.
- * @param string $perm unused until Permissions matrix is wired
+ * Require a Melde permission (personal row + group PermissionSpec). User.Admin always passes.
+ * @param string $perm e.g. perm_editConfig
  */
 function requirePermission($perm = 'perm_editConfig') {
     if(!loggedIn()) {
@@ -400,6 +509,7 @@ function requirePermission($perm = 'perm_editConfig') {
         }
         exit;
     }
+    refreshSessionAdmin();
     if(hasPermission($perm)) {
         return;
     }

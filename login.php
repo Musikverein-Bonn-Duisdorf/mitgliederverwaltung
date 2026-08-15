@@ -34,11 +34,20 @@ if(tryMeldeSsoLoginFromRequest()) {
     <?php
     die("<div class=\"w3-panel ".$GLOBALS['optionsDB']['colorSuccess']."\"><h2>Login erfolgreich (SSO).</h2></div>");
 }
+enforceMitgliederverwaltungAccess();
+if(!empty($GLOBALS['loginDeniedNoAccess'])) {
+      ?>
+    <div class="w3-panel <?php echo $GLOBALS['optionsDB']['colorLogError']; ?>"><h2>Keine Berechtigung für die Mitgliederverwaltung.</h2></div>
+    <?php
+}
 if(isset($_POST['triggerlogin'])) {
     $r = validateUser($_POST['login'] ?? '', $_POST['password'] ?? '');
     if(!$r) {
+        $msg = !empty($GLOBALS['loginDeniedNoAccess'])
+            ? 'Keine Berechtigung für die Mitgliederverwaltung.'
+            : 'Login fehlgeschlagen.';
       ?>
-    <div class="w3-panel <?php echo $GLOBALS['optionsDB']['colorLogError']; ?>"><h2>Login fehlgeschlagen.</h2></div>
+    <div class="w3-panel <?php echo $GLOBALS['optionsDB']['colorLogError']; ?>"><h2><?php echo htmlspecialchars($msg, ENT_QUOTES, 'UTF-8'); ?></h2></div>
     <?php
     }
 }
