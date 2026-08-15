@@ -211,6 +211,61 @@ function redirectAfterPost($url) {
     exit;
 }
 
+function requireLoggedInOrRedirect() {
+    if(!loggedIn()) {
+        header('Location: login.php');
+        exit;
+    }
+}
+
+function setFlash($type, $message) {
+    $_SESSION['flash'] = array(
+        'type' => (string)$type,
+        'message' => (string)$message,
+    );
+}
+
+function getFlash() {
+    if(!isset($_SESSION['flash'])) {
+        return null;
+    }
+    $flash = $_SESSION['flash'];
+    unset($_SESSION['flash']);
+    return $flash;
+}
+
+/**
+ * Queue a toast outside .app-main (footer dumps $mlDeferredToasts).
+ * @param array|null $flash
+ * @return string Always empty (toast is deferred)
+ */
+function renderFlashHtml($flash = null) {
+    if($flash === null) {
+        $flash = getFlash();
+    }
+    if(!$flash || $flash['message'] === '') {
+        return '';
+    }
+    $isError = ($flash['type'] === 'error');
+    $mod = $isError ? 'app-toast--error' : 'app-toast--success';
+    $role = $isError ? 'alert' : 'status';
+    $attrs = $isError ? '' : ' data-autodismiss="3500"';
+    $close = $isError
+        ? '<button type="button" class="app-toast-close" aria-label="Hinweis schließen">&times;</button>'
+        : '';
+    $html = '<div class="app-toast '.$mod.'" role="'.$role.'"'.$attrs.'>'
+        .'<div class="app-toast-body">'
+        .htmlspecialchars($flash['message'], ENT_QUOTES, 'UTF-8')
+        .'</div>'
+        .$close
+        .'</div>';
+    if(!isset($GLOBALS['mlDeferredToasts'])) {
+        $GLOBALS['mlDeferredToasts'] = '';
+    }
+    $GLOBALS['mlDeferredToasts'] .= $html;
+    return '';
+}
+
 /**
  * Request helper (POST preferred, then GET).
  * @param string $key

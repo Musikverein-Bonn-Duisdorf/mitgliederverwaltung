@@ -24,9 +24,9 @@ Verkaufbare / installierbare Module:
 
 - `updater.php` / `update.php`: Git-Check/Pull + Schema prüfen/reparieren nur für `mit_*`.
 - `config-menu.php` / `savePara.php`: globale Einstellungen + Farbschemata (`mit_config`).
+- `backup.php` / `libs/backup.php`: ZIP-Download + Restore nur für `mit_*` (nie Melde-Identity).
 - `log.php` / `getLog.php` / `getList.php?type=log`: eigenes `mit_Log` (Chunk, Server-Suche, Live-Poll) — Melde-UI-SHELL §2.
 - `install.php`: Erstinstallation (fresh create); Admin-Reparatur bevorzugt über Updater.
-- Backup/Restore: noch nicht portiert (folgt Melde/Archiv-Muster, Prefix `mit_`).
 
 ## UI-Shell (Melde-Parität)
 

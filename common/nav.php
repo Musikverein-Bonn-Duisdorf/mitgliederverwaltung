@@ -98,11 +98,12 @@ if($isAdminNav) {
         <div class="admin-nav app-nav-admin">
           <div class="app-nav-admin-title"><i class="fas fa-wrench" aria-hidden="true"></i><span class="nav-label">Admin</span></div>
           <div class="w3-bar-block <?php echo $navAdminColor; ?>">
-            <div class="w3-dropdown-hover w3-mobile admin-nav-group<?php echo adminNavGroupActiveClass(array('updater', 'install', 'log', 'config')); ?>">
+            <div class="w3-dropdown-hover w3-mobile admin-nav-group<?php echo adminNavGroupActiveClass(array('updater', 'install', 'log', 'config', 'backup')); ?>">
               <button type="button" class="w3-button w3-mobile w3-block w3-left-align <?php echo htmlspecialchars(navGroupClass('system'), ENT_QUOTES, 'UTF-8'); ?>">Verwaltung <i class="fas fa-caret-right admin-nav-caret"></i></button>
               <div class="w3-dropdown-content w3-bar-block w3-card-4 <?php echo $navAdminColor; ?> w3-mobile">
                 <a title="Updater" href="updater.php" class="w3-bar-item w3-button w3-mobile <?php getAdminPage('updater'); ?>"><i class="fas fa-code-branch"></i> Updater</a>
                 <a title="Konfiguration" href="config-menu.php" class="w3-bar-item w3-button w3-mobile <?php getAdminPage('config'); ?>"><i class="fas fa-cogs"></i> Konfiguration</a>
+                <a title="Backup" href="backup.php" class="w3-bar-item w3-button w3-mobile <?php getAdminPage('backup'); ?>"><i class="fas fa-file-archive"></i> Backup</a>
                 <a title="Log" href="log.php" class="w3-bar-item w3-button w3-mobile <?php getAdminPage('log'); ?>"><i class="fas fa-poll"></i> Log</a>
                 <a title="Installation" href="install.php" class="w3-bar-item w3-button w3-mobile <?php getAdminPage('install'); ?>"><i class="fas fa-database"></i> Installation</a>
               </div>

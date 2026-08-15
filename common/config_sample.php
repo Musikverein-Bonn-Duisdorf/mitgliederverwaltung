@@ -18,4 +18,8 @@ mysqli_set_charset($GLOBALS['conn'], 'utf8mb4');
 global $dbprefix;
 global $identityPrefix;
 global $sql;
+// Opt-in HTTP remote backup token (min 32 chars). Empty = disabled.
+// Generate: openssl rand -hex 32 — never reuse Melde $cronID.
+$backupToken = '';
+global $backupToken;
 ?>
