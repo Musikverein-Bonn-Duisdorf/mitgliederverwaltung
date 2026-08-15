@@ -1,3 +1,7 @@
+<?php
+session_start();
+include __DIR__.'/common/include.php';
+?>
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -6,7 +10,6 @@
   <link rel="stylesheet" href="styles/w3.css">
   <link rel="stylesheet" href="styles/w3-colors-highway.css">
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" crossorigin="anonymous">
-  <?php include __DIR__.'/include.php'; ?>
   <link rel="icon" href="<?php echo h($optionsDB['favicon']); ?>" type="image/x-icon">
   <?php
   if(!loggedIn()) {

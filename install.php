@@ -16,16 +16,6 @@ if(!is_readable($configFile)) {
 }
 
 require_once $configFile;
-
-if(!function_exists('sqlerror')) {
-    function sqlerror() {
-        if(!isset($GLOBALS['conn']) || !mysqli_errno($GLOBALS['conn'])) return;
-        echo '<div class="w3-panel w3-red"><b>SQL ERROR</b> '
-            .htmlspecialchars(mysqli_errno($GLOBALS['conn']).': '.mysqli_error($GLOBALS['conn']))
-            .'</div>';
-    }
-}
-
 require_once __DIR__.'/libs/helpers.php';
 require_once __DIR__.'/libs/SQLtable.php';
 require_once __DIR__.'/config/ConfigDefaults.php';

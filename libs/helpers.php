@@ -51,6 +51,7 @@ function h($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+if(!function_exists('sqlerror')) {
 function sqlerror() {
     if(!isset($GLOBALS['conn']) || !mysqli_errno($GLOBALS['conn'])) {
         return;
@@ -63,6 +64,7 @@ function sqlerror() {
     echo '<div class="w3-container '.$color.' w3-mobile w3-border w3-padding"><b>SQL ERROR </b>'
         .h(mysqli_errno($GLOBALS['conn']).': '.mysqli_error($GLOBALS['conn']))
         .'</div>';
+}
 }
 
 function getPage($string) {

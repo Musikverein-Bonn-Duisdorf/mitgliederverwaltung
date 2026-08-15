@@ -1,5 +1,6 @@
 <?php
 session_start();
+include 'common/include.php';
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -8,7 +9,6 @@ session_start();
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="styles/w3.css">
   <link rel="stylesheet" href="styles/w3-colors-highway.css">
-  <?php include 'common/include.php'; ?>
   <title><?php echo h($optionsDB['WebSiteName']); ?> — Login</title>
 </head>
 <body class="<?php echo h($optionsDB['colorBackground']); ?>">
