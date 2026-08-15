@@ -6,7 +6,13 @@ function identityPrefix() {
 function loadconfig() {
     $optionsDB = array();
     $sql = sprintf('SELECT * FROM `%sconfig`;', $GLOBALS['dbprefix']);
-    $dbr = mysqli_query($GLOBALS['conn'], $sql);
+    // PHP 8+ mysqli may throw; missing config = fresh install / defaults only.
+    try {
+        $dbr = mysqli_query($GLOBALS['conn'], $sql);
+    }
+    catch(Throwable $e) {
+        $dbr = false;
+    }
     if($dbr) {
         while($row = mysqli_fetch_array($dbr)) {
             $optionsDB[$row['Parameter']] = $row['Value'];

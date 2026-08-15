@@ -18,4 +18,21 @@ include __DIR__.'/../libs/ssoTicket.php';
 $optionsDB = loadconfig();
 global $optionsDB;
 include __DIR__.'/version.php';
+
+// Fresh install: no mit_* schema yet — send browsers to install.php.
+if(php_sapi_name() !== 'cli') {
+    $script = basename(isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '');
+    if($script !== 'install.php') {
+        try {
+            $freshCheck = new SchemaManager();
+            if($freshCheck->isFreshInstall()) {
+                header('Location: install.php');
+                exit;
+            }
+        }
+        catch(Throwable $e) {
+            // SchemaManager/DBconfig unreadable — leave page to surface error.
+        }
+    }
+}
 ?>
