@@ -32,7 +32,7 @@ $sections[] = array(
 <ul class="help-list">
 <li><i class="fas fa-home"></i> <b>Übersicht</b> – Einstieg mit Zählern zu den Bereichen</li>
 '.($canShowUsers ? '
-<li><i class="fas fa-users"></i> <b>Mitglieder</b> – Mitgliedschaften (Suche, Detail)</li>
+<li><i class="fas fa-users"></i> <b>Personen</b> – alle Melde-User (Suche, Filter, Detail)</li>
 <li><i class="fas fa-university"></i> <b>SEPA</b> – Lastschriftmandate (IBAN maskiert)</li>
 <li><i class="fas fa-file-alt"></i> <b>Dokumente</b> – Metadaten zu Nextcloud-Pfaden</li>
 ' : '').'
@@ -49,16 +49,18 @@ $sections[] = array(
     'id' => 'uebersicht',
     'title' => 'Übersicht',
     'body' => '
-<p>Die <b>Übersicht</b> zeigt die Anzahl der Mitgliedschaften, SEPA-Mandate und Dokumente und verlinkt in die jeweiligen Listen.</p>
+<p>Die <b>Übersicht</b> zeigt die Anzahl der Personen, SEPA-Mandate und Dokumente und verlinkt in die jeweiligen Listen.</p>
 '
 );
 
 $sections[] = array(
-    'id' => 'mitglieder',
-    'title' => 'Mitglieder',
+    'id' => 'personen',
+    'title' => 'Personen',
     'body' => '
-<p>Unter <b>Mitglieder</b> siehst du alle Mitgliedschaften. Die Suchzeile filtert nach Name, Typ und Status (UND über mehrere Wörter).</p>
-<p>Ein Eintrag öffnet die Detailseite: Typ und Status, Mitgliedschaftszeiträume (falls gepflegt) sowie verknüpfte Dokumente. Von dort kannst du ein Dokument für die Person anlegen.</p>
+<p>Unter <b>Personen</b> siehst du alle nicht gelöschten Melde-User (nicht nur bestehende Mitgliedschaften). Filter: alle / Mitglied heute / aktiv / fördernd / kein Mitglied. Die Suchzeile filtert nach Name, Email und Typ. Mit Recht <code>perm_editUsers</code> legst du über <b>Neu</b> Personen an (Identity-Zeile in der Meldeliste; Orchesterbetrieb bleibt inaktiv, bis dort gepflegt).</p>
+<p>Im Detail pflegst du die <b>vollständigen Stammdaten</b> sowie Mitgliedschaft (Beitritt/Typwechsel/Austritt), SEPA und Dokumente. Speichern erfordert <code>perm_editUsers</code>.</p>
+<p><b>Beitritt:</b> Beitrittsformular öffnen (Daten + heutiges Eintrittsdatum vorausgefüllt) → Speichern → Drucken → unterschreiben → Scan hochladen. Der Upload setzt Mitgliedschaft (Datum und Typ vom Formular) und bei SEPA das Mandat. Typwechsel und Austritt erscheinen erst nach Eintritt.</p>
+<p>Melde-<b>Active</b> (regelmäßig dabei / keine Karteileiche) bleibt in der Meldeliste und ist nicht der Mitgliedstyp.</p>
 '
 );
 
@@ -105,7 +107,7 @@ $sections[] = array(
 <li><b>Updater</b> – Software-Update vom Remote und Datenbank prüfen/reparieren; der Bericht listet nur Änderungen und Probleme. Nach Deploy ggf. „Datenbank reparieren“ für Schema v4 (<code>mit_Permissions</code>)</li>
 ' : '').'
 '.($canShowLog ? '
-<li><b>Log</b> – Anwendungsprotokoll (Server-Suche, Live-Aktualisierung, Nachladen beim Scrollen)</li>
+<li><b>Log</b> – Anwendungsprotokoll: Stammdaten, Mitgliedschaftsperioden, Beitrittsanträge, SEPA, Dokumente, Rechte und Config (Server-Suche, Live-Aktualisierung, Nachladen beim Scrollen)</li>
 ' : '').'
 </ul>
 '

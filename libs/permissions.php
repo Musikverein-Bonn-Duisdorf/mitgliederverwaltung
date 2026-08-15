@@ -280,6 +280,25 @@ class Permissions
         return $this;
     }
 
+    public function load_by_id($id) {
+        $id = (int)$id;
+        if($id < 1 || !self::tableReady()) {
+            return false;
+        }
+        $sql = sprintf(
+            'SELECT * FROM `%s` WHERE `Index` = %d LIMIT 1;',
+            self::tableName(),
+            $id
+        );
+        $dbr = self::query($sql);
+        $row = $dbr ? mysqli_fetch_assoc($dbr) : null;
+        if(!$row) {
+            return false;
+        }
+        $this->fill($row);
+        return true;
+    }
+
     /** @param array $row */
     private function fill($row) {
         foreach($row as $key => $val) {
@@ -350,7 +369,7 @@ class Permissions
             $this->Index = (int)mysqli_insert_id($GLOBALS['conn']);
             if(class_exists('Log')) {
                 $log = new Log();
-                $log->DBinsert($this->logSummary('angelegt'));
+                $log->DBinsert($this->getVars());
             }
         }
         return (bool)$ok;
@@ -359,6 +378,10 @@ class Permissions
     private function update() {
         if(!self::tableReady()) {
             return false;
+        }
+        if(class_exists('Log')) {
+            $log = new Log();
+            $log->DBupdate($this->getChanges());
         }
         $sql = sprintf(
             'UPDATE `%s` SET `User` = %d, `perm_showUsers` = %d, `perm_editUsers` = %d, `perm_editPermissions` = %d WHERE `Index` = %d;',
@@ -369,31 +392,37 @@ class Permissions
             (int)$this->perm_editPermissions,
             (int)$this->Index
         );
-        $ok = self::query($sql);
-        if($ok && class_exists('Log')) {
-            $log = new Log();
-            $log->DBupdate($this->logSummary('geändert'));
-        }
-        return (bool)$ok;
+        return (bool)self::query($sql);
     }
 
-    /** @param string $verb */
-    private function logSummary($verb) {
-        $name = (string)$this->User;
-        $u = new IdentityUser();
-        if($u->load_by_id((int)$this->User)) {
-            $name = $u->getName();
-        }
-        $parts = array();
+    public function getVars() {
+        $parts = array(mitLogUserHeader((int)$this->User));
+        $parts[] = 'MIT-Rechte-ID: '.(int)$this->Index;
         foreach(self::permissionKeys() as $key) {
-            $parts[] = $key.'='.(int)$this->$key;
+            logAppendTrue($parts, $key, $this->$key);
         }
-        return sprintf(
-            'MIT-Rechte %s für User (%d) <b>%s</b>: %s',
-            $verb,
-            (int)$this->User,
-            htmlspecialchars($name, ENT_QUOTES, 'UTF-8'),
-            implode(', ', $parts)
+        return implode(', ', $parts);
+    }
+
+    public function getChanges() {
+        $old = new self();
+        $old->load_by_id((int)$this->Index);
+        $header = mitLogUserHeader((int)$this->User).', MIT-Rechte-ID: '.(int)$this->Index;
+        $parts = array();
+        $labels = array(
+            'perm_showUsers' => 'Nutzer lesen',
+            'perm_editUsers' => 'Nutzer schreiben',
+            'perm_editPermissions' => 'Rechte verwalten',
         );
+        foreach(self::permissionKeys() as $key) {
+            if(boolsDiffer($old->$key, $this->$key)) {
+                $label = isset($labels[$key]) ? $labels[$key] : $key;
+                $parts[] = $label.': '.bool2string($old->$key).' &rArr; <b>'.bool2string($this->$key).'</b>';
+            }
+        }
+        if(!$parts) {
+            return $header;
+        }
+        return $header.', '.implode(', ', $parts);
     }
 }

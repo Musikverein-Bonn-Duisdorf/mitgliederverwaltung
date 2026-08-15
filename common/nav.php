@@ -63,8 +63,8 @@ if($isAdminNav) {
       <i class="fas fa-home" aria-hidden="true"></i><span class="nav-label">Übersicht</span>
     </a>
 <?php if(hasPermission('perm_showUsers')) { ?>
-    <a class="app-nav-item <?php getPage('members', 'nutzer'); ?>" href="members.php" title="Mitglieder">
-      <i class="fas fa-users" aria-hidden="true"></i><span class="nav-label">Mitglieder</span>
+    <a class="app-nav-item <?php getPage('members', 'nutzer'); ?>" href="members.php" title="Personen">
+      <i class="fas fa-users" aria-hidden="true"></i><span class="nav-label">Personen</span>
     </a>
     <a class="app-nav-item <?php getPage('sepa', 'nutzer'); ?>" href="sepa.php" title="SEPA">
       <i class="fas fa-university" aria-hidden="true"></i><span class="nav-label">SEPA</span>

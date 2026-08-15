@@ -2,14 +2,47 @@
     "Membership": {
         "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
         "User": {"Type": "int"},
-        "Type": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
-        "Status": {"Type": "text", "Collation": "utf8mb4_unicode_ci"}
+        "AnnualFeeCents": {"Type": "int", "Null": "YES"}
     },
     "MembershipPeriod": {
         "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
         "Membership": {"Type": "int"},
         "DateFrom": {"Type": "date"},
-        "DateTo": {"Type": "date", "Null": "YES"}
+        "DateTo": {"Type": "date", "Null": "YES"},
+        "ExitReason": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "Note": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"}
+    },
+    "MembershipTypePeriod": {
+        "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
+        "Membership": {"Type": "int"},
+        "Type": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "DateFrom": {"Type": "date"},
+        "DateTo": {"Type": "date", "Null": "YES"},
+        "Note": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"}
+    },
+    "MembershipApplication": {
+        "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
+        "User": {"Type": "int"},
+        "DesiredType": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "DesiredEntryDate": {"Type": "date", "Null": "YES"},
+        "AnnualFeeCents": {"Type": "int", "Null": "YES"},
+        "Birthday": {"Type": "date", "Null": "YES"},
+        "Phone": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "Phone2": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "Street": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "Zip": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "City": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "Country": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "AccountHolder": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "BankName": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "Iban": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "Bic": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "PaymentMethod": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "ScanFile": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "Status": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
+        "CreatedAt": {"Type": "timestamp", "Default": "CURRENT_TIMESTAMP", "Extra": "DEFAULT_GENERATED"},
+        "AppliedAt": {"Type": "timestamp", "Null": "YES"},
+        "Note": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"}
     },
     "SepaMandate": {
         "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
@@ -62,5 +95,17 @@
         "perm_showUsers": {"Type": "tinyint", "Default": 0},
         "perm_editUsers": {"Type": "tinyint", "Default": 0},
         "perm_editPermissions": {"Type": "tinyint", "Default": 0}
+    },
+    "MemberProfile": {
+        "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
+        "User": {"Type": "int"},
+        "Birthday": {"Type": "date", "Null": "YES"},
+        "Phone": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "Phone2": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "Street": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "Zip": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "City": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "Country": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
+        "AccountHolder": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"}
     }
 }

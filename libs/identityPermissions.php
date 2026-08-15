@@ -185,14 +185,36 @@ class IdentityPermissions
         $mitglied = false;
         $hasInstrument = false;
         $sql = sprintf(
-            'SELECT `Mitglied`, `Instrument` FROM `%sUser` WHERE `Index` = %d LIMIT 1;',
+            'SELECT `Instrument` FROM `%sUser` WHERE `Index` = %d LIMIT 1;',
             identityPrefix(),
             (int)$userId
         );
         try { $dbr = mysqli_query($GLOBALS['conn'], $sql); } catch(Throwable $e) { $dbr = false; }
         if($dbr && ($row = mysqli_fetch_assoc($dbr))) {
-            $mitglied = !empty($row['Mitglied']);
             $hasInstrument = isset($row['Instrument']) && (int)$row['Instrument'] > 0;
+        }
+        // Vereinsmitgliedschaft: open MembershipPeriod today; legacy Melde-Mitglied as fallback.
+        if(class_exists('MembershipPeriod') && MembershipPeriod::userIsMemberOn((int)$userId)) {
+            $mitglied = true;
+            return;
+        }
+        try {
+            $dbr = mysqli_query($GLOBALS['conn'], sprintf(
+                'SHOW COLUMNS FROM `%sUser` LIKE "Mitglied";',
+                identityPrefix()
+            ));
+            if($dbr && mysqli_fetch_row($dbr)) {
+                $dbr2 = mysqli_query($GLOBALS['conn'], sprintf(
+                    'SELECT `Mitglied` FROM `%sUser` WHERE `Index` = %d LIMIT 1;',
+                    identityPrefix(),
+                    (int)$userId
+                ));
+                $row = $dbr2 ? mysqli_fetch_assoc($dbr2) : null;
+                $mitglied = $row && !empty($row['Mitglied']);
+            }
+        }
+        catch(Throwable $e) {
+            $mitglied = false;
         }
     }
 

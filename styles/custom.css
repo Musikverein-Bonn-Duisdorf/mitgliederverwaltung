@@ -4036,8 +4036,170 @@ body.meld-cal-print {
 
 @media (min-width: 720px) {
   .profile-grid--3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .profile-grid--3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
+
+.profile-fields-inline {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 5.5rem) minmax(0, 1fr) minmax(3.5rem, 4.5rem);
+  gap: 0.5rem 0.65rem;
+  align-items: start;
+}
+
+@media (max-width: 520px) {
+  .profile-fields-inline {
+    grid-template-columns: 1fr;
+  }
+}
+
+.person-page {
+  max-width: 72rem;
+}
+
+.person-stammdaten {
+  margin: 0;
+}
+
+.person-section {
+  margin-top: 1.35rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.person-workflow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.person-workflow-status .profile-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.75rem;
+}
+
+.person-workflow-meta {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+.person-workflow-actions .w3-button {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+}
+
+.person-workflow-manual {
+  margin: 0;
+  max-width: 36rem;
+}
+
+.person-workflow-manual > summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  opacity: 0.75;
+  margin-bottom: 0.5rem;
+}
+
+.person-workflow-manual[open] > summary {
+  margin-bottom: 0.65rem;
+}
+
+.person-action-form + .person-action-form {
+  margin-top: 0.85rem;
+}
+
+.person-action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.55rem 0.75rem;
+  align-items: end;
+}
+
+.person-action-submit {
+  margin-bottom: 0.75rem;
+}
+
+.person-action-submit .w3-button {
+  width: 100%;
+}
+
+@media (min-width: 720px) {
+  .person-action-submit .w3-button {
+    width: auto;
+    min-width: 7rem;
+  }
+}
+
+.person-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .person-meta-grid,
+  .person-meta-grid--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .person-meta-grid:not(.person-meta-grid--2) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.person-meta-heading {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.person-meta-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.person-meta-list li {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 0.92rem;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.person-meta-list li:last-child {
+  border-bottom: none;
+}
+
+.person-meta-note {
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 0.85em;
+}
+
+.person-meta-empty {
+  margin: 0;
+  opacity: 0.55;
+  font-size: 0.92rem;
+}
+
+.person-meta-actions {
+  margin: 0.55rem 0 0;
 }
 
 .profile-col-title {
@@ -4932,6 +5094,7 @@ select.profile-control {
   cursor: pointer;
   line-height: 1.2;
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .inv-sort-chip:hover {

@@ -110,19 +110,81 @@ class SepaMandate
         return $out;
     }
 
+    public function getVars() {
+        $parts = array(mitLogUserHeader((int)$this->User));
+        $parts[] = 'SEPA-ID: '.(int)$this->Index;
+        $parts[] = logPart('Mandatsreferenz', logEsc($this->MandateRef));
+        $parts[] = logPart('IBAN', logEsc(maskIban($this->IbanEnc)));
+        logAppendFilled($parts, 'BIC', $this->Bic);
+        $parts[] = logPart('Gültig ab', logEsc(germanDate($this->ValidFrom)));
+        if($this->ValidTo) {
+            $parts[] = logPart('Gültig bis', logEsc(germanDate($this->ValidTo)));
+        }
+        $parts[] = logPart('Aktiv', bool2string($this->Active));
+        return implode(', ', $parts);
+    }
+
+    public function getChanges() {
+        $old = new self();
+        if(!$old->load_by_id((int)$this->Index)) {
+            return $this->getVars();
+        }
+        $header = mitLogUserHeader((int)$this->User).', SEPA-ID: '.(int)$this->Index;
+        $parts = array();
+        if((string)$old->MandateRef !== (string)$this->MandateRef) {
+            $parts[] = 'Mandatsreferenz: '.logEsc($old->MandateRef).' &rArr; <b>'.logEsc($this->MandateRef).'</b>';
+        }
+        if((string)$old->IbanEnc !== (string)$this->IbanEnc) {
+            $parts[] = 'IBAN: '.logEsc(maskIban($old->IbanEnc)).' &rArr; <b>'.logEsc(maskIban($this->IbanEnc)).'</b>';
+        }
+        if((string)$old->Bic !== (string)$this->Bic) {
+            $parts[] = 'BIC: '.logEsc($old->Bic ?: '(leer)').' &rArr; <b>'.logEsc($this->Bic ?: '(leer)').'</b>';
+        }
+        if((string)$old->ValidFrom !== (string)$this->ValidFrom) {
+            $parts[] = 'Gültig ab: '.logEsc(germanDate($old->ValidFrom)).' &rArr; <b>'.logEsc(germanDate($this->ValidFrom)).'</b>';
+        }
+        if((string)$old->ValidTo !== (string)$this->ValidTo) {
+            $o = $old->ValidTo ? logEsc(germanDate($old->ValidTo)) : '(offen)';
+            $n = $this->ValidTo ? logEsc(germanDate($this->ValidTo)) : '(offen)';
+            $parts[] = 'Gültig bis: '.$o.' &rArr; <b>'.$n.'</b>';
+        }
+        if(boolsDiffer($old->Active, $this->Active)) {
+            $parts[] = 'Aktiv: '.bool2string($old->Active).' &rArr; <b>'.bool2string($this->Active).'</b>';
+        }
+        if(!$parts) {
+            return $header;
+        }
+        return $header.', '.implode(', ', $parts);
+    }
+
     public function save() {
         if(!$this->is_valid()) {
             return false;
         }
         if((int)$this->Index > 0) {
+            if(class_exists('Log')) {
+                $log = new Log();
+                $log->DBupdate($this->getChanges());
+            }
             return $this->update();
         }
-        return $this->insert();
+        if(!$this->insert()) {
+            return false;
+        }
+        if(class_exists('Log')) {
+            $log = new Log();
+            $log->DBinsert($this->getVars());
+        }
+        return true;
     }
 
     public function delete() {
         if((int)$this->Index < 1) {
             return false;
+        }
+        if(class_exists('Log')) {
+            $log = new Log();
+            $log->DBdelete($this->getVars());
         }
         $sql = sprintf(
             'DELETE FROM `%sSepaMandate` WHERE `Index` = %d LIMIT 1;',

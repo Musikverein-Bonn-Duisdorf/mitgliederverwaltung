@@ -5,6 +5,11 @@
  * v2: Log.Type int, logListChunkSize
  * v3: HoverEffect config default
  * v4: mit_Permissions (show/edit users, edit permissions)
+ * v5: MemberProfile + MembershipTypeChange (user hub)
+ * v6: Period-based membership (Tenure + TypePeriod + Application); drop Membership Type/Status flags
+ *     + Beitrittsformular SEPA/Verein config defaults
+ * v7: Individual AnnualFeeCents; Mindestbeitrag aktiv/fördernd in config
+ * v8: MembershipApplication.PaymentMethod (sepa|ueberweisung)
  */
-return 4;
+return 8;
 ?>

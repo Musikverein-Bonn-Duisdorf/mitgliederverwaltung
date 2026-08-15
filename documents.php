@@ -19,8 +19,6 @@ if(isset($_POST['save_document'])) {
     $doc->Note = trim((string)($_POST['note'] ?? ''));
     if($doc->save()) {
         $saved = true;
-        $log = new Log;
-        $log->DBinsert('Document: User: ('.(int)$doc->User.') <b>'.h($doc->DocType).'</b>, Path: <b>'.h($doc->NextcloudPath).'</b>');
     }
     else {
         $error = 'Speichern fehlgeschlagen — Pflichtfelder prüfen.';

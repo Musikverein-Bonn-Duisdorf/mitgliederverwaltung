@@ -410,8 +410,95 @@ function csrf_field() {
 }
 
 function bool2string($val) {
-    if($val) return 'ja';
-    return 'nein';
+    if($val) return "ja";
+    return "nein";
+}
+
+/** Compare two values as booleans (avoids null/"0" false-positive diffs). */
+function boolsDiffer($a, $b) {
+    return (bool)$a !== (bool)$b;
+}
+
+function logValueFilled($value, $allowZero = false) {
+    if($value === null) {
+        return false;
+    }
+    if(is_bool($value)) {
+        return $value;
+    }
+    if(is_int($value) || is_float($value)) {
+        if(!$allowZero && (float)$value == 0) {
+            return false;
+        }
+        return true;
+    }
+    $s = trim((string)$value);
+    if($s === '' || $s === '-') {
+        return false;
+    }
+    return true;
+}
+
+function logPart($label, $valueHtml) {
+    return $label.': <b>'.$valueHtml.'</b>';
+}
+
+function logAppendFilled(array &$parts, $label, $value, $valueHtml = null, $allowZero = false) {
+    if(!logValueFilled($value, $allowZero)) {
+        return;
+    }
+    $parts[] = logPart($label, $valueHtml !== null ? $valueHtml : htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'));
+}
+
+function logAppendTrue(array &$parts, $label, $value) {
+    if(!$value) {
+        return;
+    }
+    $parts[] = logPart($label, bool2string($value));
+}
+
+/** Escaped display for log diffs. */
+function logEsc($value) {
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
+
+/**
+ * Melde-style user chip header for Log messages.
+ * @param int $userId
+ * @return string
+ */
+function mitLogUserHeader($userId) {
+    $userId = (int)$userId;
+    $name = '#'.$userId;
+    if(class_exists('IdentityUser')) {
+        $u = new IdentityUser();
+        if($u->load_by_id($userId)) {
+            $name = $u->getName();
+        }
+    }
+    return sprintf(
+        'User-ID: %d, User: (%d) <b>%s</b>',
+        $userId,
+        $userId,
+        logEsc($name)
+    );
+}
+
+/**
+ * Resolve Melde-User-ID for a Membership Index.
+ * @param int $membershipId
+ * @return int
+ */
+function mitMembershipUserId($membershipId) {
+    $membershipId = (int)$membershipId;
+    if($membershipId < 1 || !class_exists('Membership')) {
+        return 0;
+    }
+    $m = new Membership();
+    if(!$m->load_by_id($membershipId)) {
+        return 0;
+    }
+    return (int)$m->User;
 }
 
 function formatConfigLogValue($value, $type = '') {

@@ -168,6 +168,48 @@ function getConfigDefaults() {
             'Description' => 'Log: Einträge pro Scroll-/Poll-Seite (1–500)',
         ),
         array(
+            'Parameter' => 'VereinName',
+            'Value' => 'Musikverein Bonn-Duisdorf gegr. 1949 e.V.',
+            'Type' => 'string',
+            'Description' => 'Vollständiger Vereinsname (Beitrittsformular / SEPA)',
+        ),
+        array(
+            'Parameter' => 'SepaCreditorBank',
+            'Value' => 'VR-Bank Bonn Rhein-Sieg eG',
+            'Type' => 'string',
+            'Description' => 'Kreditinstitut des Vereins (SEPA-Gläubiger)',
+        ),
+        array(
+            'Parameter' => 'SepaCreditorIban',
+            'Value' => 'DE12 3706 9520 8008 6120 14',
+            'Type' => 'string',
+            'Description' => 'IBAN des Vereinskontos (SEPA-Gläubiger)',
+        ),
+        array(
+            'Parameter' => 'SepaCreditorBic',
+            'Value' => 'GENODED1RST',
+            'Type' => 'string',
+            'Description' => 'BIC des Vereinskontos (SEPA-Gläubiger)',
+        ),
+        array(
+            'Parameter' => 'SepaCreditorId',
+            'Value' => '',
+            'Type' => 'string',
+            'Description' => 'SEPA-Gläubiger-Identifikationsnummer (CI)',
+        ),
+        array(
+            'Parameter' => 'BeitragMindestAktivCents',
+            'Value' => '2000',
+            'Type' => 'int',
+            'Description' => 'Mindest-Jahresbeitrag aktives Mitglied (Cent)',
+        ),
+        array(
+            'Parameter' => 'BeitragMindestFoerderndCents',
+            'Value' => '2000',
+            'Type' => 'int',
+            'Description' => 'Mindest-Jahresbeitrag förderndes Mitglied (Cent)',
+        ),
+        array(
             'Parameter' => 'SchemaVersion',
             'Value' => '0',
             'Type' => 'int',

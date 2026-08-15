@@ -5,7 +5,7 @@ $_SESSION['page'] = 'home';
 $_SESSION['adminpage'] = false;
 include 'common/header.php';
 
-$nMembers = hasPermission('perm_showUsers') ? count(Membership::listAll()) : 0;
+$nMembers = hasPermission('perm_showUsers') ? count(IdentityUser::listHub('all')) : 0;
 $nSepa = hasPermission('perm_showUsers') ? count(SepaMandate::listAll()) : 0;
 $nDocs = hasPermission('perm_showUsers') ? count(Document::listAll()) : 0;
 
@@ -14,9 +14,9 @@ adminListChromeClose(false);
 ?>
 <div id="Liste">
 <?php if(hasPermission('perm_showUsers')) { ?>
-  <a class="list-row w3-padding w3-border-bottom w3-block" href="members.php" data-search="mitglieder mitgliedschaften">
+  <a class="list-row w3-padding w3-border-bottom w3-block" href="members.php" data-search="personen mitglieder mitgliedschaften">
     <div class="w3-row">
-      <div class="w3-col l8 m8 s8"><i class="fas fa-users" aria-hidden="true"></i> Mitglieder</div>
+      <div class="w3-col l8 m8 s8"><i class="fas fa-users" aria-hidden="true"></i> Personen</div>
       <div class="w3-col l4 m4 s4 w3-right-align"><?php echo (int)$nMembers; ?></div>
     </div>
   </a>

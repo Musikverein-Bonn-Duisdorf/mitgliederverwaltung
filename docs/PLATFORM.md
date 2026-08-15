@@ -6,7 +6,7 @@ Verkaufbare / installierbare Module:
 |-------|------|------------------|----------|
 | Meldeliste | meldeliste | `meldeliste_` (später `melde_`) | Owner von `User` + `Permissions` |
 | Notenarchiv | notenarchiv | `archiv_` | liest Melde-`User` |
-| Mitgliederverwaltung | mitgliederverwaltung | `mit_` | liest Melde-`User` |
+| Mitgliederverwaltung | mitgliederverwaltung | `mit_` | liest Melde-`User`; Hub für Profil/Mitgliedschaft/SEPA |
 
 ## Betriebsmodelle
 
@@ -21,6 +21,7 @@ Verkaufbare / installierbare Module:
 - Melde-Eingriffe in der Parallelphase minimal (SSO-Hook, später UserVoice).
 - Modul-Zugang: Melde-Flag `perm_accessMitgliederverwaltung` (Login + SSO-Redeem in MIT; Ausstellung auch in Melde-`sso.php`).
 - In-App-Rechte: eigene Matrix `mit_Permissions` / `permissions.php` (lesen/schreiben Nutzerdaten, Rechte verwalten). Melde-Ops-Flags weiter für Config/Log bis eigene System-Rechte folgen.
+- User-Hub: alle Melde-User in MIT; vollständige Stammdatenpflege in MIT (Name/Email auf Melde-User + `mit_MemberProfile`); Melde behält Orchester-Subset; Mitgliedschaft nur in MIT-Perioden; Fördernde in Melde-Listen ausgeblendet (explizite Chips ok). Keine zweite Personen-Tabelle.
 
 ## Ops (eigenes Modul)
 

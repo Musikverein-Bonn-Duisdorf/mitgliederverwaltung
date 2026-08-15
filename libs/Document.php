@@ -103,19 +103,68 @@ class Document
         return $out;
     }
 
+    public function getVars() {
+        $parts = array(mitLogUserHeader((int)$this->User));
+        $parts[] = 'Document-ID: '.(int)$this->Index;
+        $parts[] = logPart('Typ', logEsc($this->DocType));
+        $parts[] = logPart('Pfad', logEsc($this->NextcloudPath));
+        logAppendFilled($parts, 'Notiz', $this->Note);
+        return implode(', ', $parts);
+    }
+
+    public function getChanges() {
+        $old = new self();
+        if(!$old->load_by_id((int)$this->Index)) {
+            return $this->getVars();
+        }
+        $header = mitLogUserHeader((int)$this->User).', Document-ID: '.(int)$this->Index;
+        $parts = array();
+        if((string)$old->DocType !== (string)$this->DocType) {
+            $parts[] = 'Typ: '.logEsc($old->DocType).' &rArr; <b>'.logEsc($this->DocType).'</b>';
+        }
+        if((string)$old->NextcloudPath !== (string)$this->NextcloudPath) {
+            $parts[] = 'Pfad: '.logEsc($old->NextcloudPath).' &rArr; <b>'.logEsc($this->NextcloudPath).'</b>';
+        }
+        if((string)$old->Note !== (string)$this->Note) {
+            $parts[] = 'Notiz: '.logEsc($old->Note ?: '(leer)').' &rArr; <b>'.logEsc($this->Note ?: '(leer)').'</b>';
+        }
+        if((int)$old->User !== (int)$this->User) {
+            $parts[] = 'User: ('.(int)$old->User.') &rArr; <b>('.((int)$this->User).')</b>';
+        }
+        if(!$parts) {
+            return $header;
+        }
+        return $header.', '.implode(', ', $parts);
+    }
+
     public function save() {
         if(!$this->is_valid()) {
             return false;
         }
         if((int)$this->Index > 0) {
+            if(class_exists('Log')) {
+                $log = new Log();
+                $log->DBupdate($this->getChanges());
+            }
             return $this->update();
         }
-        return $this->insert();
+        if(!$this->insert()) {
+            return false;
+        }
+        if(class_exists('Log')) {
+            $log = new Log();
+            $log->DBinsert($this->getVars());
+        }
+        return true;
     }
 
     public function delete() {
         if((int)$this->Index < 1) {
             return false;
+        }
+        if(class_exists('Log')) {
+            $log = new Log();
+            $log->DBdelete($this->getVars());
         }
         $sql = sprintf(
             'DELETE FROM `%sDocument` WHERE `Index` = %d LIMIT 1;',
