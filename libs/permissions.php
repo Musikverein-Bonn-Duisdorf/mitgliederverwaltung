@@ -15,6 +15,7 @@ class Permissions
 
     private static $cache = array();
     private static $anyoneCanEditCache = null;
+    private static $tableReady = null;
 
     public function __get($key) {
         return isset($this->_data[$key]) ? $this->_data[$key] : null;
@@ -43,6 +44,34 @@ class Permissions
     /** @return bool */
     public static function isMitKey($perm) {
         return in_array((string)$perm, self::permissionKeys(), true);
+    }
+
+    /**
+     * PHP 8.1+ mysqli throws even with @ — catch missing-table / offline DB.
+     * @param string $sql
+     * @return mysqli_result|bool|null
+     */
+    private static function query($sql) {
+        if(!isset($GLOBALS['conn']) || !$GLOBALS['conn']) {
+            return null;
+        }
+        try {
+            return mysqli_query($GLOBALS['conn'], $sql);
+        }
+        catch(Throwable $e) {
+            return null;
+        }
+    }
+
+    /** @return bool */
+    public static function tableReady() {
+        if(self::$tableReady !== null) {
+            return self::$tableReady;
+        }
+        $sql = sprintf('SHOW TABLES LIKE "%s";', self::tableName());
+        $dbr = self::query($sql);
+        self::$tableReady = ($dbr && mysqli_fetch_row($dbr)) ? true : false;
+        return self::$tableReady;
     }
 
     /**
@@ -112,6 +141,7 @@ class Permissions
             unset(self::$cache[(int)$userId]);
         }
         self::$anyoneCanEditCache = null;
+        self::$tableReady = null;
     }
 
     /** @return bool */
@@ -119,14 +149,14 @@ class Permissions
         if(self::$anyoneCanEditCache !== null) {
             return self::$anyoneCanEditCache;
         }
-        if(!isset($GLOBALS['conn'])) {
+        if(!self::tableReady()) {
             return self::$anyoneCanEditCache = false;
         }
         $sql = sprintf(
             'SELECT 1 FROM `%s` WHERE `perm_editPermissions` = 1 LIMIT 1;',
             self::tableName()
         );
-        $dbr = @mysqli_query($GLOBALS['conn'], $sql);
+        $dbr = self::query($sql);
         self::$anyoneCanEditCache = ($dbr && mysqli_fetch_row($dbr)) ? true : false;
         return self::$anyoneCanEditCache;
     }
@@ -146,7 +176,7 @@ class Permissions
             identityPrefix(),
             $userId
         );
-        $dbr = @mysqli_query($GLOBALS['conn'], $sql);
+        $dbr = self::query($sql);
         $row = ($dbr) ? mysqli_fetch_assoc($dbr) : null;
         return $row && !empty($row['Admin']);
     }
@@ -162,7 +192,7 @@ class Permissions
         }
         $p = new self();
         $p->User = $userId;
-        if($userId < 1 || !isset($GLOBALS['conn'])) {
+        if($userId < 1 || !isset($GLOBALS['conn']) || !self::tableReady()) {
             self::$cache[$userId] = $p;
             return $p;
         }
@@ -171,7 +201,7 @@ class Permissions
             self::tableName(),
             $userId
         );
-        $dbr = @mysqli_query($GLOBALS['conn'], $sql);
+        $dbr = self::query($sql);
         if($dbr && ($row = mysqli_fetch_assoc($dbr))) {
             $p->fill($row);
         }
@@ -257,6 +287,9 @@ class Permissions
     }
 
     private function insert() {
+        if(!self::tableReady()) {
+            return false;
+        }
         $sql = sprintf(
             'INSERT INTO `%s` (`User`, `perm_showUsers`, `perm_editUsers`, `perm_editPermissions`) VALUES (%d, %d, %d, %d);',
             self::tableName(),
@@ -265,7 +298,7 @@ class Permissions
             (int)$this->perm_editUsers,
             (int)$this->perm_editPermissions
         );
-        $ok = mysqli_query($GLOBALS['conn'], $sql);
+        $ok = self::query($sql);
         if($ok) {
             $this->Index = (int)mysqli_insert_id($GLOBALS['conn']);
             if(class_exists('Log')) {
@@ -277,6 +310,9 @@ class Permissions
     }
 
     private function update() {
+        if(!self::tableReady()) {
+            return false;
+        }
         $sql = sprintf(
             'UPDATE `%s` SET `User` = %d, `perm_showUsers` = %d, `perm_editUsers` = %d, `perm_editPermissions` = %d WHERE `Index` = %d;',
             self::tableName(),
@@ -286,7 +322,7 @@ class Permissions
             (int)$this->perm_editPermissions,
             (int)$this->Index
         );
-        $ok = mysqli_query($GLOBALS['conn'], $sql);
+        $ok = self::query($sql);
         if($ok && class_exists('Log')) {
             $log = new Log();
             $log->DBupdate($this->logSummary('geändert'));

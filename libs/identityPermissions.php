@@ -44,7 +44,11 @@ class IdentityPermissions
             $table,
             $userId
         );
-        $dbr = @mysqli_query($GLOBALS['conn'], $sql);
+        try {
+            $dbr = mysqli_query($GLOBALS['conn'], $sql);
+        } catch(Throwable $e) {
+            $dbr = false;
+        }
         if($dbr && ($row = mysqli_fetch_assoc($dbr))) {
             foreach($row as $key => $val) {
                 if(strpos($key, 'perm_') === 0) {
@@ -75,7 +79,7 @@ class IdentityPermissions
         }
         $table = identityPrefix().'Group';
         $sql = sprintf('SELECT `MemberSpec`, `PermissionSpec` FROM `%s`;', $table);
-        $dbr = @mysqli_query($GLOBALS['conn'], $sql);
+        try { $dbr = mysqli_query($GLOBALS['conn'], $sql); } catch(Throwable $e) { $dbr = false; }
         if(!$dbr) {
             return $out;
         }
@@ -185,7 +189,7 @@ class IdentityPermissions
             identityPrefix(),
             (int)$userId
         );
-        $dbr = @mysqli_query($GLOBALS['conn'], $sql);
+        try { $dbr = mysqli_query($GLOBALS['conn'], $sql); } catch(Throwable $e) { $dbr = false; }
         if($dbr && ($row = mysqli_fetch_assoc($dbr))) {
             $mitglied = !empty($row['Mitglied']);
             $hasInstrument = isset($row['Instrument']) && (int)$row['Instrument'] > 0;
