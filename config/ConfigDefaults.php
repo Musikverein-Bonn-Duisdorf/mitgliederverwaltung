@@ -156,6 +156,12 @@ function getConfigDefaults() {
             'Description' => 'Gespeicherte Farbschemata (JSON, intern)',
         ),
         array(
+            'Parameter' => 'HoverEffect',
+            'Value' => 'w3-hover-gray',
+            'Type' => 'string',
+            'Description' => 'Stil des Hover-Effekts in Listen',
+        ),
+        array(
             'Parameter' => 'logListChunkSize',
             'Value' => '100',
             'Type' => 'uint',

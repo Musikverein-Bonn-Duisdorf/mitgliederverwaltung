@@ -11,4 +11,4 @@
 
 Prefix: `mit_`. Identity: `meldeliste_User`.
 
-Schema-Version: siehe `config/schema_version_number.php` (aktuell 2: Log.Type int).
+Schema-Version: siehe `config/schema_version_number.php` (aktuell 3: HoverEffect).

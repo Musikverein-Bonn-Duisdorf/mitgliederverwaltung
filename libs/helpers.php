@@ -227,6 +227,79 @@ function mitRequest($key, $default = null) {
     return $default;
 }
 
+function csrf_token() {
+    if(empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function csrf_verify($token) {
+    if(!isset($_SESSION['csrf_token']) || !is_string($token)) {
+        return false;
+    }
+    return hash_equals($_SESSION['csrf_token'], $token);
+}
+
+function csrf_field() {
+    return '<input type="hidden" name="csrf_token" value="'
+        .htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8').'">';
+}
+
+function bool2string($val) {
+    if($val) return 'ja';
+    return 'nein';
+}
+
+function formatConfigLogValue($value, $type = '') {
+    if($value === null || $value === '') {
+        return '(leer)';
+    }
+    if($type === 'bool') {
+        return bool2string($value);
+    }
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
+
+function logConfigChange($parameter, $oldValue, $newValue, $type = '') {
+    if((string)$oldValue === (string)$newValue) {
+        return;
+    }
+    $label = (string)$parameter;
+    if($type === '' && function_exists('getConfigDefaults')) {
+        foreach(getConfigDefaults() as $item) {
+            if($item['Parameter'] === $parameter) {
+                $type = isset($item['Type']) ? (string)$item['Type'] : '';
+                if(!empty($item['Description'])) {
+                    $label = $parameter.' ('.$item['Description'].')';
+                }
+                break;
+            }
+        }
+    }
+    if(!class_exists('Log')) {
+        return;
+    }
+    $logentry = new Log;
+    $logentry->DBupdate(sprintf(
+        'Config <b>%s</b>: %s &rArr; <b>%s</b>',
+        htmlspecialchars($label, ENT_QUOTES, 'UTF-8'),
+        formatConfigLogValue($oldValue, $type),
+        formatConfigLogValue($newValue, $type)
+    ));
+}
+
+/**
+ * Params edited outside the config form (schemes UI / updater).
+ */
+function mitIsHiddenConfigParam($parameter) {
+    return in_array((string)$parameter, array(
+        'colorSchemeActive',
+        'colorSchemes',
+        'SchemaVersion',
+    ), true);
+}
+
 /**
  * True when a DBupdate log message encodes a real field change (Melde parity).
  */
