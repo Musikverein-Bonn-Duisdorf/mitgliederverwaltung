@@ -20,6 +20,12 @@ Verkaufbare / installierbare Module:
 - Feature-Flags / Lizenz-Hook später andockbar (`modules.enabled` o. Ä.).
 - Melde-Eingriffe in der Parallelphase minimal (SSO-Hook, später UserVoice).
 
+## Ops (eigenes Modul)
+
+- `updater.php` / `update.php`: Git-Check/Pull + Schema prüfen/reparieren nur für `mit_*`.
+- `install.php`: Erstinstallation (fresh create); Admin-Reparatur bevorzugt über Updater.
+- Backup/Restore: noch nicht portiert (folgt Melde/Archiv-Muster, Prefix `mit_`).
+
 ## UI-Shell (Melde-Parität)
 
 Siehe Pointer [`docs/UI-SHELL.md`](UI-SHELL.md) → Meldeliste **master** [`docs/UI-SHELL.md`](https://github.com/Musikverein-Bonn-Duisdorf/meldeliste/blob/master/docs/UI-SHELL.md). Keine lokale Kopie des Vertrags.

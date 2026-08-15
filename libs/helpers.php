@@ -202,4 +202,69 @@ function germanDate($string) {
     $d = substr((string)$string, 8, 2);
     return $d.'.'.$m.'.'.$y;
 }
+
+function redirectAfterPost($url) {
+    while(ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    header('Location: '.$url);
+    exit;
+}
+
+/**
+ * Melde-compat: until IdentityPermissions is ported, only User.Admin grants access.
+ * @param string $perm e.g. perm_editConfig (ignored except for API shape)
+ */
+function hasPermission($perm = '') {
+    return !empty($_SESSION['admin']);
+}
+
+/**
+ * Require Melde User.Admin (session). Later: perm_editConfig via IdentityPermissions.
+ * @param string $perm unused until Permissions matrix is wired
+ */
+function requirePermission($perm = 'perm_editConfig') {
+    if(!loggedIn()) {
+        if(!headers_sent()) {
+            header('Location: login.php');
+        }
+        exit;
+    }
+    if(hasPermission($perm)) {
+        return;
+    }
+    denyAccess('Keine Berechtigung für diesen Bereich.');
+}
+
+function requireMitAdmin() {
+    requirePermission('perm_editConfig');
+}
+
+/**
+ * @param string $message
+ */
+function denyAccess($message = 'Keine Berechtigung für diesen Bereich.') {
+    if(!headers_sent()) {
+        http_response_code(403);
+    }
+    $color = isset($GLOBALS['optionsDB']['colorLogWarning'])
+        ? $GLOBALS['optionsDB']['colorLogWarning']
+        : 'w3-orange';
+    $panel = '<div class="w3-panel '.$color.' w3-padding w3-margin">'
+        .'<h3>Zugriff verweigert</h3>'
+        .'<p>'.htmlspecialchars((string)$message, ENT_QUOTES, 'UTF-8').'</p>'
+        .'</div>';
+    if(!empty($GLOBALS['mlHeaderRendered']) && file_exists(__DIR__.'/../common/footer.php')) {
+        echo $panel;
+        include __DIR__.'/../common/footer.php';
+    }
+    else {
+        echo '<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Zugriff verweigert</title>'
+            .'<link rel="stylesheet" href="styles/w3.css"></head><body>'
+            .$panel
+            .'<p class="w3-padding"><a href="index.php">Zur Übersicht</a> · <a href="login.php">Login</a></p>'
+            .'</body></html>';
+    }
+    exit;
+}
 ?>

@@ -45,7 +45,9 @@ if($isAdminNav) {
             $inst = (int)$schemaMgr->getInstalledSchemaVersion();
             $exp = (int)$schemaMgr->getExpectedSchemaVersion();
             echo '<div class="w3-orange w3-padding app-banner"><i class="fas fa-database"></i> '
-                .'Neue Datenbank-Version verfügbar (installiert: <b>'.$inst.'</b>, Soll: <b>'.$exp.'</b>).'
+                .'Neue Datenbank-Version verfügbar (installiert: <b>'.$inst.'</b>, Soll: <b>'.$exp.'</b>). '
+                .'Bitte im <a href="updater.php"><b>Updater</b></a> „Datenbank reparieren“ ausführen '
+                .'oder „Update durchführen“ (aktualisiert die DB bei Bedarf mit).'
                 .'</div>';
         }
     }
@@ -96,10 +98,11 @@ if($isAdminNav) {
         <div class="admin-nav app-nav-admin">
           <div class="app-nav-admin-title"><i class="fas fa-wrench" aria-hidden="true"></i><span class="nav-label">Admin</span></div>
           <div class="w3-bar-block <?php echo $navAdminColor; ?>">
-            <div class="w3-dropdown-hover w3-mobile admin-nav-group">
+            <div class="w3-dropdown-hover w3-mobile admin-nav-group<?php echo adminNavGroupActiveClass(array('updater', 'install')); ?>">
               <button type="button" class="w3-button w3-mobile w3-block w3-left-align <?php echo htmlspecialchars(navGroupClass('system'), ENT_QUOTES, 'UTF-8'); ?>">Verwaltung <i class="fas fa-caret-right admin-nav-caret"></i></button>
               <div class="w3-dropdown-content w3-bar-block w3-card-4 <?php echo $navAdminColor; ?> w3-mobile">
-                <a title="Schema" href="install.php" class="w3-bar-item w3-button w3-mobile <?php echo htmlspecialchars(navGroupClass('system'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fas fa-database"></i> Installation</a>
+                <a title="Updater" href="updater.php" class="w3-bar-item w3-button w3-mobile <?php getAdminPage('updater'); ?>"><i class="fas fa-code-branch"></i> Updater</a>
+                <a title="Installation" href="install.php" class="w3-bar-item w3-button w3-mobile <?php getAdminPage('install'); ?>"><i class="fas fa-database"></i> Installation</a>
               </div>
             </div>
           </div>
