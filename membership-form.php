@@ -189,7 +189,7 @@ header('Content-Type: text/html; charset=utf-8');
               class="loan-form-btn loan-form-btn--primary"
               name="action"
               value="upload"
-              onclick="var f=document.getElementById('membership-form-fields'); var i=f&&f.querySelector('input[name=scan]'); if(!i||!i.files||!i.files.length){alert('Bitte zuerst eine Datei wählen.'); return false;} return confirm('Scan hochladen und Beitritt mit dem Eintrittsdatum auf dem Formular anwenden?');">Hochladen</button>
+              onclick="var i=document.querySelector('input[name=scan][form=membership-form-fields]'); if(!i||!i.files||!i.files.length){alert('Bitte zuerst eine Datei wählen.'); return false;} return confirm('Scan hochladen und Beitritt mit dem Eintrittsdatum auf dem Formular anwenden?');">Hochladen</button>
 <?php } ?>
     </div>
   </div>
