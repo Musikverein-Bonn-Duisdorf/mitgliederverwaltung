@@ -2,6 +2,10 @@
 
 Automatisch aus Git-Release-Commits erzeugt.
 
+## 2026-08-15-cbd71 (2026-08-15)
+
+- MIT-16: Membership periods, Beitrittsformular, and person workflow.
+
 ## 2026-08-15-c7d90 (2026-08-15)
 
 - MIT-14: Grant all MIT rights to the first user who logs in.
