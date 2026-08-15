@@ -7,7 +7,7 @@ include 'common/header.php';
 requirePermission('perm_showUsers');
 
 $filter = isset($_GET['filter']) ? (string)$_GET['filter'] : 'all';
-if(!in_array($filter, array('all', 'member', 'aktiv', 'foerdernd', 'none'), true)) {
+if(!in_array($filter, array('all', 'member', 'aktiv', 'foerdernd', 'none', 'retention_due'), true)) {
     $filter = 'all';
 }
 $rows = IdentityUser::listHub($filter);
@@ -20,6 +20,7 @@ $filterLinks = array(
     'aktiv' => 'Aktiv',
     'foerdernd' => 'Fördernd',
     'none' => 'Kein Mitglied',
+    'retention_due' => 'Löschung fällig',
 );
 
 $actions = '';
@@ -54,6 +55,7 @@ adminListSearchField('Name, Email, Typ…', array('onkeyup' => 'filterListRows()
     $email = trim((string)$u->Email);
     $isMember = !empty($row['isMember']);
     $type = isset($row['type']) ? $row['type'] : null;
+    $retentionDue = isset($row['retentionDue']) ? $row['retentionDue'] : null;
     if($isMember && $type === 'foerdernd') {
         $typeLabel = 'fördernd';
     }
@@ -62,6 +64,9 @@ adminListSearchField('Name, Email, Typ…', array('onkeyup' => 'filterListRows()
     }
     elseif($isMember) {
         $typeLabel = 'Mitglied';
+    }
+    elseif($retentionDue !== null && $retentionDue <= date('Y-m-d')) {
+        $typeLabel = 'Löschung fällig';
     }
     else {
         $typeLabel = '—';
@@ -77,7 +82,11 @@ adminListSearchField('Name, Email, Typ…', array('onkeyup' => 'filterListRows()
     <div class="w3-row">
       <div class="w3-col l4 m5 s12"><?php echo h($name); ?> <span class="w3-small w3-text-grey">#<?php echo (int)$u->Index; ?></span></div>
       <div class="w3-col l4 m4 s12 w3-small"><?php echo h($email !== '' ? $email : '—'); ?></div>
-      <div class="w3-col l4 m3 s12"><?php echo h($typeLabel); ?></div>
+      <div class="w3-col l4 m3 s12"><?php echo h($typeLabel); ?><?php
+        if(!$isMember && $retentionDue) {
+            echo ' <span class="w3-small w3-text-grey">'.h(germanDate($retentionDue)).'</span>';
+        }
+      ?></div>
     </div>
   </a>
 <?php } ?>

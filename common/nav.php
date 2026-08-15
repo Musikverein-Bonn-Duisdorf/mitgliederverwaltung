@@ -66,6 +66,37 @@ if($isAdminNav) {
     <a class="app-nav-item <?php getPage('members', 'nutzer'); ?>" href="members.php" title="Personen">
       <i class="fas fa-users" aria-hidden="true"></i><span class="nav-label">Personen</span>
     </a>
+<?php } ?>
+<?php if(hasPermission('perm_showJubilees')) { ?>
+    <div class="app-nav-cat app-nav-cat--desktop admin-nav<?php echo navGroupOpenClass(array('calendar', 'calendar-list')); ?>">
+      <div class="w3-dropdown-hover w3-mobile admin-nav-group<?php echo navGroupOpenClass(array('calendar', 'calendar-list')); ?>">
+        <button type="button" class="w3-button w3-mobile w3-block w3-left-align app-nav-cat-toggle <?php echo htmlspecialchars(navGroupClass('jubilaeen'), ENT_QUOTES, 'UTF-8'); ?>">
+          <i class="fas fa-award" aria-hidden="true"></i><span class="nav-label">Jubiläen</span>
+          <i class="fas fa-caret-right admin-nav-caret" aria-hidden="true"></i>
+        </button>
+        <div class="w3-dropdown-content w3-bar-block w3-card-4 <?php echo $navColor; ?> w3-mobile">
+          <a title="Kalender" href="calendar.php" class="w3-bar-item w3-button w3-mobile <?php getPage('calendar', 'jubilaeen'); ?>">
+            <i class="fas fa-calendar-alt" aria-hidden="true"></i> Kalender
+          </a>
+          <a title="Liste" href="calendar.php?view=year" class="w3-bar-item w3-button w3-mobile <?php getPage('calendar-list', 'jubilaeen'); ?>">
+            <i class="fas fa-list" aria-hidden="true"></i> Liste
+          </a>
+        </div>
+      </div>
+    </div>
+    <a class="app-nav-item app-nav-jubilee-mobile <?php
+      $jubPage = isset($_SESSION['page']) ? (string)$_SESSION['page'] : '';
+      if($jubPage === 'calendar' || $jubPage === 'calendar-list') {
+          echo htmlspecialchars((string)$optionsDB['colorTitleBar'], ENT_QUOTES, 'UTF-8');
+      }
+      else {
+          echo htmlspecialchars(navGroupClass('jubilaeen'), ENT_QUOTES, 'UTF-8');
+      }
+    ?>" href="calendar.php" title="Jubiläen">
+      <i class="fas fa-award" aria-hidden="true"></i><span class="nav-label">Jubiläen</span>
+    </a>
+<?php } ?>
+<?php if(hasPermission('perm_showUsers')) { ?>
     <a class="app-nav-item <?php getPage('sepa', 'nutzer'); ?>" href="sepa.php" title="SEPA">
       <i class="fas fa-university" aria-hidden="true"></i><span class="nav-label">SEPA</span>
     </a>
@@ -94,6 +125,19 @@ if($isAdminNav) {
         <button type="button" class="app-nav-more-close" id="appNavMoreClose" aria-label="Schließen">&times;</button>
       </div>
       <div class="app-nav-more-body">
+<?php if(hasPermission('perm_showJubilees')) { ?>
+        <div class="app-nav-more-only-mobile admin-nav app-nav-jubilee-more">
+          <div class="app-nav-admin-title"><i class="fas fa-award" aria-hidden="true"></i><span class="nav-label">Jubiläen</span></div>
+          <div class="w3-bar-block <?php echo $navColor; ?>">
+            <a title="Kalender" href="calendar.php" class="w3-bar-item w3-button w3-mobile <?php getPage('calendar', 'jubilaeen'); ?>">
+              <i class="fas fa-calendar-alt" aria-hidden="true"></i> Kalender
+            </a>
+            <a title="Liste" href="calendar.php?view=year" class="w3-bar-item w3-button w3-mobile <?php getPage('calendar-list', 'jubilaeen'); ?>">
+              <i class="fas fa-list" aria-hidden="true"></i> Liste
+            </a>
+          </div>
+        </div>
+<?php } ?>
 <?php if($meldeUrl !== '') { ?>
         <a class="app-nav-item app-nav-more-only-mobile <?php echo htmlspecialchars(navGroupClass('system'), ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($meldeUrl, ENT_QUOTES, 'UTF-8'); ?>" title="Meldeliste">
           <i class="fas fa-clipboard-list" aria-hidden="true"></i><span class="nav-label">Meldeliste</span>

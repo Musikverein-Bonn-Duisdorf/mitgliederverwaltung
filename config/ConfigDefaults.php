@@ -210,6 +210,36 @@ function getConfigDefaults() {
             'Description' => 'Mindest-Jahresbeitrag förderndes Mitglied (Cent)',
         ),
         array(
+            'Parameter' => 'membershipRetentionYears',
+            'Value' => '5',
+            'Type' => 'uint',
+            'Description' => 'Jahre Aufbewahrung nach Austritt/Tod bis Lösch-Erinnerung',
+        ),
+        array(
+            'Parameter' => 'jubileeBirthdayAges',
+            'Value' => '10,20,30,40,50,60,70',
+            'Type' => 'string',
+            'Description' => 'Jubiläen Geburtstag: feste Alter (Komma-getrennt)',
+        ),
+        array(
+            'Parameter' => 'jubileeBirthdayStepAfter',
+            'Value' => '5',
+            'Type' => 'uint',
+            'Description' => 'Jubiläen Geburtstag: Schrittweite nach dem größten festen Alter',
+        ),
+        array(
+            'Parameter' => 'jubileeMembershipYears',
+            'Value' => '20,25,40,45,50',
+            'Type' => 'string',
+            'Description' => 'Mitgliedschaftsjubiläen: feste Jahre (Komma-getrennt)',
+        ),
+        array(
+            'Parameter' => 'jubileeMembershipStepAfter',
+            'Value' => '5',
+            'Type' => 'uint',
+            'Description' => 'Mitgliedschaftsjubiläen: Schrittweite nach dem größten festen Jahr',
+        ),
+        array(
             'Parameter' => 'SchemaVersion',
             'Value' => '0',
             'Type' => 'int',

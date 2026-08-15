@@ -98,14 +98,18 @@ class SchemaManager
         $this->processSchema(false, false);
         $this->pruneObsoleteSchema(false);
         $this->checkConfigDefaults(false);
+        $this->pruneObsoleteConfig(false);
         return $this->report;
     }
 
     public function create() {
         $this->report = array();
+        $installedBefore = $this->getInstalledSchemaVersion();
         $this->processSchema(true, false);
         $this->pruneObsoleteSchema(true);
         $this->checkConfigDefaults(true);
+        $this->pruneObsoleteConfig(true);
+        $this->migratePermissionGrants($installedBefore, true);
         $this->ensureAllTablesUtf8mb4();
         $this->finalizeSchemaVersion();
         return $this->report;
@@ -113,9 +117,12 @@ class SchemaManager
 
     public function repair() {
         $this->report = array();
+        $installedBefore = $this->getInstalledSchemaVersion();
         $this->processSchema(true, true);
         $this->pruneObsoleteSchema(true);
         $this->checkConfigDefaults(true);
+        $this->pruneObsoleteConfig(true);
+        $this->migratePermissionGrants($installedBefore, true);
         $this->ensureAllTablesUtf8mb4();
         $this->finalizeSchemaVersion();
         return $this->report;
@@ -385,6 +392,101 @@ class SchemaManager
                     mysqli_errno($GLOBALS['conn']).': '.mysqli_error($GLOBALS['conn'])
                 );
             }
+        }
+    }
+
+    /**
+     * Config keys removed from ConfigDefaults (still present in older DBs).
+     * @return string[]
+     */
+    public static function obsoleteConfigParameters() {
+        return array(
+            'jubileeBirthdayRule',
+        );
+    }
+
+    private function pruneObsoleteConfig($apply) {
+        $configTable = new SQLtable('config');
+        if(!$configTable->exists()) {
+            return;
+        }
+        foreach(self::obsoleteConfigParameters() as $param) {
+            $sql = sprintf(
+                "SELECT `Parameter` FROM `%sconfig` WHERE `Parameter` = '%s' LIMIT 1;",
+                $GLOBALS['dbprefix'],
+                mysqli_real_escape_string($GLOBALS['conn'], $param)
+            );
+            $dbr = mysqli_query($GLOBALS['conn'], $sql);
+            $row = $dbr ? mysqli_fetch_array($dbr) : null;
+            if(!$row || !isset($row['Parameter'])) {
+                continue;
+            }
+            if(!$apply) {
+                $this->addReport('config', $param, 'obsolete', 'Config-Parameter nicht mehr in Defaults');
+                continue;
+            }
+            $del = sprintf(
+                "DELETE FROM `%sconfig` WHERE `Parameter` = '%s' LIMIT 1;",
+                $GLOBALS['dbprefix'],
+                mysqli_real_escape_string($GLOBALS['conn'], $param)
+            );
+            if(mysqli_query($GLOBALS['conn'], $del)) {
+                $this->addReport('config', $param, 'removed', 'Veralteten Config-Parameter entfernt');
+                if(isset($GLOBALS['optionsDB']) && is_array($GLOBALS['optionsDB'])) {
+                    unset($GLOBALS['optionsDB'][$param]);
+                }
+            }
+            else {
+                $this->addReport(
+                    'config',
+                    $param,
+                    'error',
+                    'Veralteter Config-Parameter konnte nicht entfernt werden',
+                    mysqli_errno($GLOBALS['conn']).': '.mysqli_error($GLOBALS['conn'])
+                );
+            }
+        }
+    }
+
+    /**
+     * One-shot data fixes tied to schema bumps (after columns exist).
+     * @param int $installedBefore
+     * @param bool $apply
+     */
+    private function migratePermissionGrants($installedBefore, $apply) {
+        $installedBefore = (int)$installedBefore;
+        if($installedBefore >= 12) {
+            return;
+        }
+        $table = new SQLtable('Permissions');
+        if(!$table->exists() || !$table->columnExists('perm_showJubilees')) {
+            return;
+        }
+        if(!$apply) {
+            $this->addReport('config', 'perm_showJubilees', 'missing', 'Bestehende Nutzer-Leser erhalten Jubiläen-Recht bei Repair');
+            return;
+        }
+        $sql = sprintf(
+            'UPDATE `%s` SET `perm_showJubilees` = 1
+             WHERE `perm_showJubilees` = 0 AND (`perm_showUsers` = 1 OR `perm_editUsers` = 1);',
+            $GLOBALS['dbprefix'].'Permissions'
+        );
+        $ok = mysqli_query($GLOBALS['conn'], $sql);
+        if($ok) {
+            $n = (int)mysqli_affected_rows($GLOBALS['conn']);
+            $this->addReport('config', 'perm_showJubilees', 'fixed', 'Jubiläen-Recht an '.$n.' Nutzer mit Nutzer-Lesen/Schreiben vergeben');
+            if(class_exists('Permissions')) {
+                Permissions::clearCache();
+            }
+        }
+        else {
+            $this->addReport(
+                'config',
+                'perm_showJubilees',
+                'error',
+                'Jubiläen-Recht konnte nicht migriert werden',
+                mysqli_errno($GLOBALS['conn']).': '.mysqli_error($GLOBALS['conn'])
+            );
         }
     }
 

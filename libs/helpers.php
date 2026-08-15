@@ -547,6 +547,7 @@ function mitIsHiddenConfigParam($parameter) {
         'colorSchemeActive',
         'colorSchemes',
         'SchemaVersion',
+        'jubileeBirthdayRule', // obsolete; removed on schema repair
     ), true);
 }
 

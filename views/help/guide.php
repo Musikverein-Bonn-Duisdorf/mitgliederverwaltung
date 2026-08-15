@@ -28,13 +28,16 @@ $sections[] = array(
     'id' => 'navigation',
     'title' => 'Navigation',
     'body' => '
-<p>Auf dem Desktop steht die Navigation links (Icons mit Beschriftung). Auf schmalen Bildschirmen unten; unter <b>Mehr</b> findest du weitere Einträge, Admin und Ausloggen.</p>
+<p>Auf dem Desktop steht die Navigation links (Icons mit Beschriftung). Auf schmalen Bildschirmen unten; unter <b>Mehr</b> findest du weitere Einträge, Admin und Ausloggen. Einträge sind nach Berechtigungsgruppen eingefärbt (wie in der Meldeliste).</p>
 <ul class="help-list">
 <li><i class="fas fa-home"></i> <b>Übersicht</b> – Einstieg mit Zählern zu den Bereichen</li>
 '.($canShowUsers ? '
 <li><i class="fas fa-users"></i> <b>Personen</b> – alle Melde-User (Suche, Filter, Detail)</li>
 <li><i class="fas fa-university"></i> <b>SEPA</b> – Lastschriftmandate (IBAN maskiert)</li>
 <li><i class="fas fa-file-alt"></i> <b>Dokumente</b> – Metadaten zu Nextcloud-Pfaden</li>
+' : '').'
+'.(hasPermission('perm_showJubilees') ? '
+<li><i class="fas fa-award"></i> <b>Jubiläen</b> – <b>Kalender</b> (Monat) und <b>Liste</b> (Jahr); Recht <code>perm_showJubilees</code></li>
 ' : '').'
 '.($meldeUrl !== '' ? '<li><i class="fas fa-clipboard-list"></i> <b>Meldeliste</b> – Rückkehr zur Meldeliste (SSO)</li>' : '').'
 <li>Logo oben rechts – öffnet die <b>Vereinshomepage</b> in einem neuen Tab</li>
@@ -57,10 +60,23 @@ $sections[] = array(
     'id' => 'personen',
     'title' => 'Personen',
     'body' => '
-<p>Unter <b>Personen</b> siehst du alle nicht gelöschten Melde-User (nicht nur bestehende Mitgliedschaften). Filter: alle / Mitglied heute / aktiv / fördernd / kein Mitglied. Die Suchzeile filtert nach Name, Email und Typ. Mit Recht <code>perm_editUsers</code> legst du über <b>Neu</b> Personen an (Identity-Zeile in der Meldeliste; Orchesterbetrieb bleibt inaktiv, bis dort gepflegt).</p>
+<p>Unter <b>Personen</b> siehst du alle nicht gelöschten Melde-User (nicht nur bestehende Mitgliedschaften). Filter: alle / Mitglied heute / aktiv / fördernd / kein Mitglied / <b>Löschung fällig</b>. Die Suchzeile filtert nach Name, Email und Typ. Mit Recht <code>perm_editUsers</code> legst du über <b>Neu</b> Personen an (Identity-Zeile in der Meldeliste; Orchesterbetrieb bleibt inaktiv, bis dort gepflegt).</p>
 <p>Im Detail pflegst du die <b>vollständigen Stammdaten</b> sowie Mitgliedschaft (Beitritt/Typwechsel/Austritt), SEPA und Dokumente. Speichern erfordert <code>perm_editUsers</code>.</p>
 <p><b>Beitritt:</b> Beitrittsformular öffnen (Daten + heutiges Eintrittsdatum vorausgefüllt) → Speichern → Drucken → unterschreiben → Scan hochladen. Der Upload setzt Mitgliedschaft (Datum und Typ vom Formular) und bei SEPA das Mandat. Typwechsel und Austritt erscheinen erst nach Eintritt.</p>
+<p><b>Korrektur:</b> Mitgliedszeiten und Typzeiten im Verlauf nachträglich editieren oder löschen. Angewendete Anträge bleiben editierbar (Scan ersetzen/löschen); Antrag löschen ändert die Mitgliedschaft nicht. SEPA-Mandate auf der Personenseite anlegen, ändern oder löschen.</p>
+<p><b>Austritt/Tod:</b> beendet die Mitgliedschaft und löscht sofort alle SEPA-Mandate sowie den Kontoinhaber. Stammdaten bleiben; nach konfigurierbaren Jahren (Standard 5) erscheint der Hinweis <b>Löschung fällig</b> (Filter und Personenseite) — keine automatische Löschung.</p>
+<p><b>Jubiläen:</b> nächste Termine auf der Personenseite (z. B. „40. Geburtstag“, „25 Jahre Mitgliedschaft“). Meilensteine in der Konfiguration: feste Alter bzw. Mitgliedsjahre (Komma-Liste) und Schrittweite danach — Default Geburtstag 10…70, dann alle 5; Mitgliedschaft 20/25/40/45/50, dann alle 5.</p>
 <p>Melde-<b>Active</b> (regelmäßig dabei / keine Karteileiche) bleibt in der Meldeliste und ist nicht der Mitgliedstyp.</p>
+'
+);
+
+$sections[] = array(
+    'id' => 'jubilaeen',
+    'title' => 'Kalender / Jubiläen',
+    'visible' => hasPermission('perm_showJubilees'),
+    'body' => '
+<p>Unter <b>Jubiläen</b> in der Navigation (Recht <code>perm_showJubilees</code>): <b>Kalender</b> (Monat) und <b>Liste</b> (Jahr). Berechnete Jubiläen: <b>Geburtstag</b> (aus Stammdaten) und <b>Mitgliedschaft</b> (Jahre seit Eintritt der offenen Mitgliedszeit, nur aktuelle Mitglieder). Klick führt zur Person.</p>
+<p>Meilensteine pflegst du unter Admin → Konfiguration (<code>jubileeBirthdayAges</code>, <code>jubileeBirthdayStepAfter</code>, <code>jubileeMembershipYears</code>, <code>jubileeMembershipStepAfter</code>).</p>
 '
 );
 
@@ -68,8 +84,8 @@ $sections[] = array(
     'id' => 'sepa',
     'title' => 'SEPA',
     'body' => '
-<p>Unter <b>SEPA</b> erscheinen Lastschriftmandate: Referenz, Person, maskierte IBAN, Gültigkeit und Aktiv-Status. Die Suche filtert über diese Felder.</p>
-<p>IBANs werden nur maskiert angezeigt; die App speichert Bankdaten getrennt von der Melde-Identity.</p>
+<p>Unter <b>SEPA</b> erscheinen Lastschriftmandate: Referenz, Person, maskierte IBAN, Gültigkeit und Aktiv-Status. Die Suche filtert über diese Felder. Anlegen und Korrektur erfolgen auf der <b>Personenseite</b>.</p>
+<p>IBANs werden nur maskiert angezeigt; die App speichert Bankdaten getrennt von der Melde-Identity. Bei Austritt oder Tod werden Mandate und Kontoinhaber gelöscht.</p>
 '
 );
 
@@ -86,7 +102,7 @@ $sections[] = array(
     'id' => 'login-sso',
     'title' => 'Login &amp; Meldeliste',
     'body' => '
-<p>Die Mitgliederverwaltung teilt die Benutzerkonten mit der Meldeliste. <b>Modulzugang</b> (Login) nur mit Melde-Recht Mitgliederverwaltung. <b>In-App-Rechte</b> setzt du unter Admin → Berechtigungen (<code>mit_Permissions</code>): Nutzerdaten lesen, schreiben, Rechte verwalten.</p>
+<p>Die Mitgliederverwaltung teilt die Benutzerkonten mit der Meldeliste. <b>Modulzugang</b> (Login) nur mit Melde-Recht Mitgliederverwaltung. <b>In-App-Rechte</b> setzt du unter Admin → Berechtigungen (<code>mit_Permissions</code>): Nutzerdaten lesen/schreiben, Jubiläen sehen, Rechte verwalten. Nav und Rechte-Matrix nutzen Gruppenfarben (Nutzer, Jubiläen, System).</p>
 '.($meldeUrl !== '' ? '<p>Über den Nav-Eintrag <b>Meldeliste</b> kehrst du zurück: <a href="'.htmlspecialchars($meldeUrl, ENT_QUOTES, 'UTF-8').'">'.htmlspecialchars($meldeUrl, ENT_QUOTES, 'UTF-8').'</a></p>' : '').'
 '.($masterPage !== '' ? '<p>Die Vereinshomepage erreichst du über das Logo oder: <a href="'.htmlspecialchars($masterPage, ENT_QUOTES, 'UTF-8').'" target="_blank" rel="noopener noreferrer">'.htmlspecialchars($masterPage, ENT_QUOTES, 'UTF-8').'</a></p>' : '').'
 '

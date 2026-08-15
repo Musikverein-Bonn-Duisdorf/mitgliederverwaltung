@@ -105,7 +105,8 @@ $h = function ($s) {
 };
 
 $hasScan = trim((string)$app->ScanFile) !== '';
-$applied = $app->Status === 'applied';
+$statusApplied = $app->Status === 'applied';
+$applied = false; // nachträgliche Korrektur: Formular bleibt editierbar
 $cssUrl = assetUrl('styles/membership-form.css');
 $logoPath = is_file(__DIR__.'/imgs/Logo.png') ? 'imgs/Logo.png' : '';
 $orgName = MembershipForm::orgName();
@@ -161,24 +162,27 @@ header('Content-Type: text/html; charset=utf-8');
     <div class="loan-form-toolbar-group">
       <a class="loan-form-btn" href="person.php?id=<?php echo (int)$userId; ?>">Zurück</a>
       <button type="button" class="loan-form-btn" onclick="window.print()">Drucken</button>
-<?php if(!$applied) { ?>
       <button type="submit" form="membership-form-fields" class="loan-form-btn loan-form-btn--primary" name="action" value="saveFields">Speichern</button>
+<?php if($statusApplied) { ?>
+      <form method="POST" action="savePerson.php" class="loan-form-upload" style="display:inline;" onsubmit="return confirm('Antrag löschen? Mitgliedschaft bleibt unverändert.');">
+        <input type="hidden" name="user_id" value="<?php echo (int)$userId; ?>">
+        <input type="hidden" name="application_id" value="<?php echo (int)$app->Index; ?>">
+        <input type="hidden" name="action" value="delete_application">
+        <button type="submit" class="loan-form-btn">Antrag löschen</button>
+      </form>
 <?php } ?>
     </div>
     <div class="loan-form-toolbar-group loan-form-toolbar-group--scan">
 <?php if($hasScan) { ?>
       <div class="loan-form-scan-pair">
         <a class="loan-form-btn loan-form-btn--scan" href="membership-contract.php?id=<?php echo (int)$app->Index; ?>">Scan anzeigen</a>
-<?php   if(!$applied) { ?>
         <form class="loan-form-upload" method="POST" action="membership-contract.php" onsubmit="return confirm('Scan löschen?');">
           <input type="hidden" name="id" value="<?php echo (int)$app->Index; ?>">
           <input type="hidden" name="action" value="deleteScan">
           <button type="submit" class="loan-form-btn">Löschen</button>
         </form>
-<?php   } ?>
       </div>
 <?php } ?>
-<?php if(!$applied) { ?>
       <label class="loan-form-btn loan-form-btn--file">
         Datei
         <input type="file" form="membership-form-fields" name="scan" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,application/pdf,image/*">
@@ -189,8 +193,7 @@ header('Content-Type: text/html; charset=utf-8');
               class="loan-form-btn loan-form-btn--primary"
               name="action"
               value="upload"
-              onclick="var i=document.querySelector('input[name=scan][form=membership-form-fields]'); if(!i||!i.files||!i.files.length){alert('Bitte zuerst eine Datei wählen.'); return false;} return confirm('Scan hochladen und Beitritt mit dem Eintrittsdatum auf dem Formular anwenden?');">Hochladen</button>
-<?php } ?>
+              onclick="var i=document.querySelector('input[name=scan][form=membership-form-fields]'); if(!i||!i.files||!i.files.length){alert('Bitte zuerst eine Datei wählen.'); return false;} return confirm(<?php echo $statusApplied ? "'Scan ersetzen?'" : "'Scan hochladen und Beitritt mit dem Eintrittsdatum auf dem Formular anwenden?'"; ?>);">Hochladen</button>
     </div>
   </div>
 
@@ -198,11 +201,9 @@ header('Content-Type: text/html; charset=utf-8');
   <div class="loan-form-toolbar no-print"><p><?php echo $h($flash); ?></p></div>
 <?php } ?>
 
-<?php if(!$applied) { ?>
   <form id="membership-form-fields" method="POST" action="membership-form.php?id=<?php echo (int)$app->Index; ?>" enctype="multipart/form-data">
     <input type="hidden" name="id" value="<?php echo (int)$app->Index; ?>">
     <input type="hidden" name="user" value="<?php echo (int)$userId; ?>">
-<?php } ?>
 
   <article class="loan-form-doc membership-form-doc" style="--loan-brand: <?php echo $h($brandBar); ?>;">
     <header class="loan-form-header">
@@ -450,7 +451,7 @@ header('Content-Type: text/html; charset=utf-8');
     </section>
   </article>
 
-<?php if(!$applied) { ?>
+<?php if(!$statusApplied) { ?>
   </form>
 
 <?php if($hasScan) { ?>
@@ -461,6 +462,9 @@ header('Content-Type: text/html; charset=utf-8');
       <button type="submit" class="loan-form-btn loan-form-btn--primary" onclick="return confirm('Beitritt mit Eintritt <?php echo $h(germanDate($app->DesiredEntryDate ?: date('Y-m-d'))); ?> anwenden?');">Beitritt anwenden (<?php echo $h(germanDate($app->DesiredEntryDate ?: date('Y-m-d'))); ?>)</button>
     </form>
   </div>
+<?php } ?>
+<?php } else { ?>
+  </form>
 <?php } ?>
   <script>
   (function () {
@@ -511,6 +515,5 @@ header('Content-Type: text/html; charset=utf-8');
     sync();
   })();
   </script>
-<?php } ?>
 </body>
 </html>

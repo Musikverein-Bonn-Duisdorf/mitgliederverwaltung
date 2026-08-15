@@ -30,11 +30,7 @@ if($appId < 1 || !$app->load_by_id($appId)) {
 $isPost = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST';
 if($isPost) {
     requirePermission('perm_editUsers');
-    if($app->Status === 'applied') {
-        http_response_code(403);
-        echo 'Antrag bereits angewendet.';
-        exit;
-    }
+    $alreadyApplied = ($app->Status === 'applied');
     $action = isset($_POST['action']) ? (string)$_POST['action'] : '';
     if($action === 'deleteScan') {
         if(!MembershipForm::deleteScan($app)) {
@@ -65,6 +61,12 @@ if($isPost) {
         $app->Status = 'ready';
     }
     $app->save();
+
+    if($alreadyApplied) {
+        $_SESSION['membershipFormFlash'] = 'Scan ersetzt.';
+        header('Location: membership-form.php?id='.$appId);
+        exit;
+    }
 
     $entry = trim((string)$app->DesiredEntryDate);
     if($entry === '') {

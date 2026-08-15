@@ -10,6 +10,7 @@ class Permissions
         'User' => null,
         'perm_showUsers' => 0,
         'perm_editUsers' => 0,
+        'perm_showJubilees' => 0,
         'perm_editPermissions' => 0,
     );
 
@@ -37,6 +38,7 @@ class Permissions
         return array(
             'perm_showUsers',
             'perm_editUsers',
+            'perm_showJubilees',
             'perm_editPermissions',
         );
     }
@@ -81,6 +83,7 @@ class Permissions
         return array(
             'perm_showUsers' => array('short' => 'Lesen', 'label' => 'Nutzerdaten lesen'),
             'perm_editUsers' => array('short' => 'Schreiben', 'label' => 'Nutzerdaten schreiben'),
+            'perm_showJubilees' => array('short' => 'Jubiläen', 'label' => 'Jubiläen sehen'),
             'perm_editPermissions' => array('short' => 'Rechte', 'label' => 'Berechtigungen verwalten'),
         );
     }
@@ -96,7 +99,28 @@ class Permissions
                 'color' => '#42A5F5',
                 'keys' => array('perm_showUsers', 'perm_editUsers', 'perm_editPermissions'),
             ),
+            array(
+                'id' => 'jubilaeen',
+                'title' => 'Jubiläen',
+                'color' => '#FFA726',
+                'keys' => array('perm_showJubilees'),
+            ),
         );
+    }
+
+    /**
+     * Accent hex for a group id (from permissionGroups).
+     * @param string $groupId
+     * @return string
+     */
+    public static function groupColor($groupId) {
+        $groupId = (string)$groupId;
+        foreach(self::permissionGroups() as $group) {
+            if(isset($group['id']) && (string)$group['id'] === $groupId) {
+                return isset($group['color']) ? (string)$group['color'] : '#78909C';
+            }
+        }
+        return '#78909C';
     }
 
     /**
@@ -357,11 +381,12 @@ class Permissions
             return false;
         }
         $sql = sprintf(
-            'INSERT INTO `%s` (`User`, `perm_showUsers`, `perm_editUsers`, `perm_editPermissions`) VALUES (%d, %d, %d, %d);',
+            'INSERT INTO `%s` (`User`, `perm_showUsers`, `perm_editUsers`, `perm_showJubilees`, `perm_editPermissions`) VALUES (%d, %d, %d, %d, %d);',
             self::tableName(),
             (int)$this->User,
             (int)$this->perm_showUsers,
             (int)$this->perm_editUsers,
+            (int)$this->perm_showJubilees,
             (int)$this->perm_editPermissions
         );
         $ok = self::query($sql);
@@ -384,11 +409,12 @@ class Permissions
             $log->DBupdate($this->getChanges());
         }
         $sql = sprintf(
-            'UPDATE `%s` SET `User` = %d, `perm_showUsers` = %d, `perm_editUsers` = %d, `perm_editPermissions` = %d WHERE `Index` = %d;',
+            'UPDATE `%s` SET `User` = %d, `perm_showUsers` = %d, `perm_editUsers` = %d, `perm_showJubilees` = %d, `perm_editPermissions` = %d WHERE `Index` = %d;',
             self::tableName(),
             (int)$this->User,
             (int)$this->perm_showUsers,
             (int)$this->perm_editUsers,
+            (int)$this->perm_showJubilees,
             (int)$this->perm_editPermissions,
             (int)$this->Index
         );
@@ -412,6 +438,7 @@ class Permissions
         $labels = array(
             'perm_showUsers' => 'Nutzer lesen',
             'perm_editUsers' => 'Nutzer schreiben',
+            'perm_showJubilees' => 'Jubiläen sehen',
             'perm_editPermissions' => 'Rechte verwalten',
         );
         foreach(self::permissionKeys() as $key) {

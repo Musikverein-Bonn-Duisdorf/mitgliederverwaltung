@@ -279,6 +279,114 @@ class MembershipPeriod
         return (bool)$ok;
     }
 
+    public static function countOpenForMembership($membershipId) {
+        $membershipId = (int)$membershipId;
+        $sql = sprintf(
+            'SELECT COUNT(*) AS `c` FROM `%s` WHERE `Membership` = %d AND (`DateTo` IS NULL);',
+            self::tableName(),
+            $membershipId
+        );
+        $dbr = mysqli_query($GLOBALS['conn'], $sql);
+        sqlerror();
+        $row = $dbr ? mysqli_fetch_assoc($dbr) : null;
+        return $row ? (int)$row['c'] : 0;
+    }
+
+    /** Configured retention years after exit/death (default 5). */
+    public static function retentionYears() {
+        $n = 5;
+        if(isset($GLOBALS['optionsDB']['membershipRetentionYears'])) {
+            $n = (int)$GLOBALS['optionsDB']['membershipRetentionYears'];
+        }
+        return max(1, min(50, $n));
+    }
+
+    /**
+     * Last closed exit DateTo (austritt|tod) for user, or null.
+     * @return string|null Y-m-d
+     */
+    public static function lastExitDateForUser($userId) {
+        $userId = (int)$userId;
+        if($userId < 1) {
+            return null;
+        }
+        $sql = sprintf(
+            'SELECT p.`DateTo` FROM `%s` m
+             INNER JOIN `%s` p ON p.`Membership` = m.`Index`
+             WHERE m.`User` = %d AND p.`DateTo` IS NOT NULL
+               AND p.`ExitReason` IN ("austritt", "tod")
+             ORDER BY p.`DateTo` DESC, p.`Index` DESC LIMIT 1;',
+            Membership::tableName(),
+            self::tableName(),
+            $userId
+        );
+        try {
+            $dbr = mysqli_query($GLOBALS['conn'], $sql);
+        }
+        catch(Throwable $e) {
+            return null;
+        }
+        $row = $dbr ? mysqli_fetch_assoc($dbr) : null;
+        return ($row && !empty($row['DateTo'])) ? substr((string)$row['DateTo'], 0, 10) : null;
+    }
+
+    /**
+     * Retention due date = last exit + N years; null if still member or no exit.
+     * @return string|null Y-m-d
+     */
+    public static function retentionDueDateForUser($userId, $today = null) {
+        $userId = (int)$userId;
+        $today = self::normalizeDate($today);
+        if(self::userIsMemberOn($userId, $today)) {
+            return null;
+        }
+        $exit = self::lastExitDateForUser($userId);
+        if($exit === null) {
+            return null;
+        }
+        $years = self::retentionYears();
+        $due = date('Y-m-d', strtotime($exit.' +'.$years.' years'));
+        return $due ?: null;
+    }
+
+    /**
+     * @return string none|upcoming|due
+     */
+    public static function userRetentionStatus($userId, $today = null) {
+        $today = self::normalizeDate($today);
+        $due = self::retentionDueDateForUser($userId, $today);
+        if($due === null) {
+            return 'none';
+        }
+        if($due <= $today) {
+            return 'due';
+        }
+        $soon = date('Y-m-d', strtotime($today.' +30 days'));
+        if($due <= $soon) {
+            return 'upcoming';
+        }
+        return 'none';
+    }
+
+    /** Delete all SEPA mandates and clear profile bank holder for user. */
+    public static function wipeBankDataForUser($userId) {
+        $userId = (int)$userId;
+        if($userId < 1) {
+            return false;
+        }
+        if(class_exists('SepaMandate')) {
+            SepaMandate::deleteAllForUser($userId);
+        }
+        if(class_exists('MemberProfile')) {
+            $profile = new MemberProfile();
+            if($profile->load_by_user($userId)) {
+                $profile->AccountHolder = null;
+                $profile->save();
+            }
+        }
+        return true;
+    }
+
     public static function normalizeDate($date) {
         if($date === null || $date === '') {
             return date('Y-m-d');

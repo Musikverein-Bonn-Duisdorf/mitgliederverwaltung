@@ -295,6 +295,37 @@ a.app-titlebar-logo {
   font-weight: 700;
 }
 
+.app-nav-cat {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-nav-cat .admin-nav-group > .w3-button.app-nav-cat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem 0.9rem;
+  margin: 0;
+  border: 0;
+  text-align: left;
+  font: inherit;
+}
+
+.app-nav-cat .admin-nav-group > .w3-button.app-nav-cat-toggle .nav-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-nav-cat .admin-nav-caret {
+  margin-left: auto;
+}
+
+.app-nav-jubilee-mobile {
+  display: none;
+}
+
 .app-main {
   flex: 1;
   min-width: 0;
@@ -548,6 +579,14 @@ a.app-titlebar-logo {
 
   .app-nav-item--secondary {
     display: none !important;
+  }
+
+  .app-nav-cat--desktop {
+    display: none !important;
+  }
+
+  .app-nav-jubilee-mobile {
+    display: flex !important;
   }
 
   .app-nav-more-body > .app-nav-form.app-nav-more-only-mobile {
@@ -1249,6 +1288,7 @@ a.app-titlebar-logo {
 @media (max-width: 992px) {
   .app-nav > .app-nav-primary > .app-nav-item.admin-nav-perm,
   .app-nav > .app-nav-primary > .app-nav-form > .app-nav-item.admin-nav-perm,
+  .app-nav > .app-nav-primary > .app-nav-cat .admin-nav-perm,
   .app-nav > .app-nav-more-wrap > .app-nav-more-toggle.admin-nav-perm {
     border-left: 0;
     border-top: 3px solid transparent;
@@ -4200,6 +4240,49 @@ body.meld-cal-print {
 
 .person-meta-actions {
   margin: 0.55rem 0 0;
+}
+
+.person-section-link {
+  margin-left: 0.35rem;
+  font-size: 0.9em;
+  opacity: 0.7;
+  text-decoration: none;
+}
+
+.person-inline-edit {
+  margin: 0;
+}
+
+.person-inline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  gap: 0.35rem 0.45rem;
+  align-items: center;
+}
+
+.person-inline-grid--sepa {
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+}
+
+.person-inline-delete {
+  display: inline-block;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.person-app-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.35rem;
+}
+
+.person-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  margin: 0;
 }
 
 .profile-col-title {

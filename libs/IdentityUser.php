@@ -318,8 +318,8 @@ class IdentityUser
 
     /**
      * Active Melde users with optional membership filter (derived from periods today).
-     * @param string $filter all|aktiv|foerdernd|none|member
-     * @return array<int,array{user:IdentityUser,membership:?Membership,type:?string,isMember:bool}>
+     * @param string $filter all|aktiv|foerdernd|none|member|retention_due
+     * @return array<int,array{user:IdentityUser,membership:?Membership,type:?string,isMember:bool,retentionDue:?string}>
      */
     public static function listHub($filter = 'all', $limit = 2000) {
         $limit = max(1, (int)$limit);
@@ -355,7 +355,7 @@ class IdentityUser
         elseif($filter === 'member') {
             $sql .= ' AND '.MembershipPeriod::sqlUserIsMemberOn('u.`Index`', $today);
         }
-        elseif($filter === 'none') {
+        elseif($filter === 'none' || $filter === 'retention_due') {
             $sql .= ' AND NOT ('.MembershipPeriod::sqlUserIsMemberOn('u.`Index`', $today).')';
         }
         $sql .= sprintf(' ORDER BY u.`Nachname`, u.`Vorname` LIMIT %d;', $limit);
@@ -384,11 +384,16 @@ class IdentityUser
                 $isMember = MembershipPeriod::userIsMemberOn((int)$u->Index, $today);
                 $type = $isMember ? MembershipTypePeriod::userTypeOn((int)$u->Index, $today) : null;
             }
+            $retentionDue = MembershipPeriod::retentionDueDateForUser((int)$u->Index, $today);
+            if($filter === 'retention_due' && ($retentionDue === null || $retentionDue > $today)) {
+                continue;
+            }
             $out[] = array(
                 'user' => $u,
                 'membership' => $membership,
                 'type' => $type,
                 'isMember' => $isMember,
+                'retentionDue' => $retentionDue,
             );
         }
         return $out;

@@ -110,6 +110,18 @@ class SepaMandate
         return $out;
     }
 
+    /** Delete every mandate for user (logs each). */
+    public static function deleteAllForUser($userId) {
+        $userId = (int)$userId;
+        $ok = true;
+        foreach(self::listForUser($userId) as $m) {
+            if(!$m->delete()) {
+                $ok = false;
+            }
+        }
+        return $ok;
+    }
+
     public function getVars() {
         $parts = array(mitLogUserHeader((int)$this->User));
         $parts[] = 'SEPA-ID: '.(int)$this->Index;

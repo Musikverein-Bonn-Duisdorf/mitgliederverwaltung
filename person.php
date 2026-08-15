@@ -28,6 +28,10 @@ $today = date('Y-m-d');
 $isMemberToday = MembershipPeriod::userIsMemberOn($userId, $today);
 $currentType = $isMemberToday ? MembershipTypePeriod::userTypeOn($userId, $today) : null;
 $openTenure = $hasMembership ? MembershipPeriod::openForMembership((int)$membership->Index) : null;
+$retentionDue = MembershipPeriod::retentionDueDateForUser($userId, $today);
+$retentionStatus = MembershipPeriod::userRetentionStatus($userId, $today);
+$canShowJubilees = hasPermission('perm_showJubilees');
+$nextJubilees = $canShowJubilees ? JubileeCalendar::nextForUser($userId, $today, 1) : array();
 
 $flash = '';
 if(!empty($_SESSION['personFlash'])) {
@@ -41,6 +45,13 @@ adminListChromeClose(false);
 
 if($flash !== '') {
     echo '<div class="w3-panel '.h($optionsDB['colorBtnSubmit']).' w3-padding"><p>'.h($flash).'</p></div>';
+}
+if($retentionStatus === 'due' || $retentionStatus === 'upcoming') {
+    $dueLabel = $retentionDue ? germanDate($retentionDue) : '';
+    $panelColor = $retentionStatus === 'due' ? h($optionsDB['colorLogError']) : h($optionsDB['colorWarning']);
+    echo '<div class="w3-panel '.$panelColor.' w3-padding"><p>Löschung fällig'
+        .($dueLabel !== '' ? ': '.h($dueLabel) : '')
+        .' ('.(int)MembershipPeriod::retentionYears().' Jahre nach Austritt/Tod).</p></div>';
 }
 
 $memberLabel = $isMemberToday
@@ -295,19 +306,56 @@ $entryDateLabel = ($openTenure && $openTenure->DateFrom) ? germanDate($openTenur
 </section>
 <?php } ?>
 
+<?php if($canShowJubilees) { ?>
+<section class="person-section" aria-labelledby="person-sec-jubilaeen">
+  <h3 id="person-sec-jubilaeen" class="profile-col-title">Jubiläen <a class="person-section-link" href="calendar.php" title="Kalender"><i class="fas fa-calendar-alt" aria-hidden="true"></i></a></h3>
+<?php if(count($nextJubilees)) { ?>
+  <ul class="person-meta-list">
+<?php foreach($nextJubilees as $jub) { ?>
+    <li>
+      <?php echo h(JubileeCalendar::formatTitle($jub)); ?>
+      · <?php echo h(germanDate($jub['date'])); ?>
+    </li>
+<?php } ?>
+  </ul>
+<?php } else { ?>
+  <p class="person-meta-empty">—</p>
+<?php } ?>
+</section>
+<?php } ?>
+
 <section class="person-section" aria-labelledby="person-sec-verlauf">
   <h3 id="person-sec-verlauf" class="profile-col-title">Verlauf</h3>
   <div class="person-meta-grid person-meta-grid--2">
     <div class="person-meta-block">
-      <h4 class="person-meta-heading">Tenure</h4>
+      <h4 class="person-meta-heading">Mitgliedszeiten</h4>
 <?php if(count($periods)) { ?>
-      <ul class="person-meta-list">
+      <ul class="person-meta-list person-edit-list">
 <?php foreach($periods as $p) { ?>
         <li>
+<?php if($canEdit) { ?>
+          <form method="post" action="savePerson.php" class="person-inline-edit">
+            <input type="hidden" name="user_id" value="<?php echo (int)$userId; ?>" />
+            <input type="hidden" name="period_id" value="<?php echo (int)$p->Index; ?>" />
+            <div class="person-inline-grid">
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="date" name="date_from" value="<?php echo h(substr((string)$p->DateFrom, 0, 10)); ?>" required title="Von" />
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="date" name="date_to" value="<?php echo $p->DateTo ? h(substr((string)$p->DateTo, 0, 10)) : ''; ?>" title="Bis (leer = offen)" />
+              <select class="w3-select w3-border profile-control <?php echo $inputBg; ?>" name="exit_reason" title="Grund">
+                <option value="">—</option>
+                <option value="austritt"<?php echo (string)$p->ExitReason === 'austritt' ? ' selected' : ''; ?>>Austritt</option>
+                <option value="tod"<?php echo (string)$p->ExitReason === 'tod' ? ' selected' : ''; ?>>Tod</option>
+              </select>
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="text" name="note" value="<?php echo h((string)$p->Note); ?>" placeholder="Notiz" />
+              <button type="submit" name="action" value="update_period" class="w3-button w3-small <?php echo h($optionsDB['colorBtnSubmit']); ?>">OK</button>
+              <button type="submit" name="action" value="delete_period" class="w3-button w3-small <?php echo h($optionsDB['colorLogError']); ?>" onclick="return confirm('Mitgliedszeit löschen?');">×</button>
+            </div>
+          </form>
+<?php } else { ?>
           <?php echo h(germanDate($p->DateFrom)); ?>
           — <?php echo $p->DateTo ? h(germanDate($p->DateTo)) : 'offen'; ?>
 <?php if($p->ExitReason) { ?> <span class="person-meta-note">(<?php echo h((string)$p->ExitReason); ?>)</span><?php } ?>
 <?php if($p->Note) { ?> <span class="person-meta-note"><?php echo h((string)$p->Note); ?></span><?php } ?>
+<?php } ?>
         </li>
 <?php } ?>
       </ul>
@@ -316,15 +364,33 @@ $entryDateLabel = ($openTenure && $openTenure->DateFrom) ? germanDate($openTenur
 <?php } ?>
     </div>
     <div class="person-meta-block">
-      <h4 class="person-meta-heading">Typ</h4>
+      <h4 class="person-meta-heading">Typzeiten</h4>
 <?php if(count($typePeriods)) { ?>
-      <ul class="person-meta-list">
+      <ul class="person-meta-list person-edit-list">
 <?php foreach($typePeriods as $t) { ?>
         <li>
+<?php if($canEdit) { ?>
+          <form method="post" action="savePerson.php" class="person-inline-edit">
+            <input type="hidden" name="user_id" value="<?php echo (int)$userId; ?>" />
+            <input type="hidden" name="type_period_id" value="<?php echo (int)$t->Index; ?>" />
+            <div class="person-inline-grid">
+              <select class="w3-select w3-border profile-control <?php echo $inputBg; ?>" name="type" required>
+                <option value="aktiv"<?php echo (string)$t->Type === 'aktiv' ? ' selected' : ''; ?>>aktiv</option>
+                <option value="foerdernd"<?php echo (string)$t->Type === 'foerdernd' ? ' selected' : ''; ?>>fördernd</option>
+              </select>
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="date" name="date_from" value="<?php echo h(substr((string)$t->DateFrom, 0, 10)); ?>" required title="Von" />
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="date" name="date_to" value="<?php echo $t->DateTo ? h(substr((string)$t->DateTo, 0, 10)) : ''; ?>" title="Bis (leer = offen)" />
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="text" name="note" value="<?php echo h((string)$t->Note); ?>" placeholder="Notiz" />
+              <button type="submit" name="action" value="update_type_period" class="w3-button w3-small <?php echo h($optionsDB['colorBtnSubmit']); ?>">OK</button>
+              <button type="submit" name="action" value="delete_type_period" class="w3-button w3-small <?php echo h($optionsDB['colorLogError']); ?>" onclick="return confirm('Typzeit löschen?');">×</button>
+            </div>
+          </form>
+<?php } else { ?>
           <strong><?php echo h((string)$t->Type); ?></strong>
           <?php echo h(germanDate($t->DateFrom)); ?>
           — <?php echo $t->DateTo ? h(germanDate($t->DateTo)) : 'offen'; ?>
 <?php if($t->Note) { ?> <span class="person-meta-note"><?php echo h((string)$t->Note); ?></span><?php } ?>
+<?php } ?>
         </li>
 <?php } ?>
       </ul>
@@ -335,23 +401,103 @@ $entryDateLabel = ($openTenure && $openTenure->DateFrom) ? germanDate($openTenur
   </div>
 </section>
 
+<section class="person-section" aria-labelledby="person-sec-antraege">
+  <h3 id="person-sec-antraege" class="profile-col-title">Anträge</h3>
+<?php if(count($applications)) { ?>
+  <ul class="person-meta-list">
+<?php foreach($applications as $a) { ?>
+    <li class="person-app-row">
+      <a href="membership-form.php?id=<?php echo (int)$a->Index; ?>">#<?php echo (int)$a->Index; ?></a>
+      · <?php echo h((string)$a->Status); ?>
+      · <?php echo h((string)$a->DesiredType); ?>
+<?php if($a->DesiredEntryDate) { ?> · <?php echo h(germanDate($a->DesiredEntryDate)); ?><?php } ?>
+<?php if($canEdit) { ?>
+      <form method="post" action="savePerson.php" class="person-inline-delete">
+        <input type="hidden" name="user_id" value="<?php echo (int)$userId; ?>" />
+        <input type="hidden" name="application_id" value="<?php echo (int)$a->Index; ?>" />
+        <input type="hidden" name="action" value="delete_application" />
+        <button type="submit" class="w3-button w3-small <?php echo h($optionsDB['colorLogError']); ?>" onclick="return confirm('Antrag löschen? Mitgliedschaft bleibt unverändert.');">Löschen</button>
+      </form>
+<?php } ?>
+    </li>
+<?php } ?>
+  </ul>
+<?php } else { ?>
+  <p class="person-meta-empty">—</p>
+<?php } ?>
+</section>
+
 <section class="person-section" aria-labelledby="person-sec-anhang">
   <h3 id="person-sec-anhang" class="profile-col-title">SEPA &amp; Dokumente</h3>
   <div class="person-meta-grid person-meta-grid--2">
     <div class="person-meta-block">
       <h4 class="person-meta-heading">SEPA</h4>
 <?php if(count($mandates)) { ?>
-      <ul class="person-meta-list">
+      <ul class="person-meta-list person-edit-list">
 <?php foreach($mandates as $mandate) { ?>
         <li>
+<?php if($canEdit) { ?>
+          <form method="post" action="savePerson.php" class="person-inline-edit">
+            <input type="hidden" name="user_id" value="<?php echo (int)$userId; ?>" />
+            <input type="hidden" name="mandate_id" value="<?php echo (int)$mandate->Index; ?>" />
+            <div class="person-inline-grid person-inline-grid--sepa">
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="text" name="mandate_ref" value="<?php echo h((string)$mandate->MandateRef); ?>" required placeholder="Referenz" />
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="text" name="iban" value="" placeholder="<?php echo h($mandate->maskedIban()); ?> (neu)" title="Leer = unverändert" />
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="text" name="bic" value="<?php echo h((string)$mandate->Bic); ?>" placeholder="BIC" />
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="date" name="valid_from" value="<?php echo h(substr((string)$mandate->ValidFrom, 0, 10)); ?>" required />
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="date" name="valid_to" value="<?php echo $mandate->ValidTo ? h(substr((string)$mandate->ValidTo, 0, 10)) : ''; ?>" />
+              <label class="person-check"><input type="checkbox" name="active" value="1"<?php echo ((int)$mandate->Active === 1) ? ' checked' : ''; ?> /> aktiv</label>
+              <button type="submit" name="action" value="sepa_update" class="w3-button w3-small <?php echo h($optionsDB['colorBtnSubmit']); ?>">OK</button>
+              <button type="submit" name="action" value="sepa_delete" class="w3-button w3-small <?php echo h($optionsDB['colorLogError']); ?>" onclick="return confirm('Mandat löschen?');">×</button>
+            </div>
+          </form>
+<?php } else { ?>
           <?php echo h((string)$mandate->MandateRef); ?>
           — <?php echo h($mandate->maskedIban()); ?>
           — <?php echo ((int)$mandate->Active === 1) ? 'aktiv' : 'inaktiv'; ?>
+<?php } ?>
         </li>
 <?php } ?>
       </ul>
 <?php } else { ?>
-      <p class="person-meta-empty"><a href="sepa.php">SEPA-Liste</a></p>
+      <p class="person-meta-empty">—</p>
+<?php } ?>
+<?php if($canEdit) { ?>
+      <details class="person-workflow-manual">
+        <summary>SEPA anlegen</summary>
+        <form method="post" action="savePerson.php" class="person-action-form">
+          <input type="hidden" name="user_id" value="<?php echo (int)$userId; ?>" />
+          <input type="hidden" name="action" value="sepa_create" />
+          <div class="person-action-grid">
+            <div class="profile-field">
+              <label class="profile-label">Referenz</label>
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="text" name="mandate_ref" required />
+            </div>
+            <div class="profile-field">
+              <label class="profile-label">IBAN</label>
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="text" name="iban" required />
+            </div>
+            <div class="profile-field">
+              <label class="profile-label">BIC</label>
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="text" name="bic" />
+            </div>
+            <div class="profile-field">
+              <label class="profile-label">Gültig ab</label>
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="date" name="valid_from" value="<?php echo h($today); ?>" required />
+            </div>
+            <div class="profile-field">
+              <label class="profile-label">Gültig bis</label>
+              <input class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="date" name="valid_to" />
+            </div>
+            <div class="profile-field">
+              <label class="person-check"><input type="checkbox" name="active" value="1" checked /> aktiv</label>
+            </div>
+            <div class="profile-field person-action-submit">
+              <button type="submit" class="w3-button <?php echo h($optionsDB['colorBtnSubmit']); ?>">Anlegen</button>
+            </div>
+          </div>
+        </form>
+      </details>
 <?php } ?>
     </div>
     <div class="person-meta-block">

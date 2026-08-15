@@ -151,6 +151,19 @@ class MembershipTypePeriod
         );
     }
 
+    public static function countOpenForMembership($membershipId) {
+        $membershipId = (int)$membershipId;
+        $sql = sprintf(
+            'SELECT COUNT(*) AS `c` FROM `%s` WHERE `Membership` = %d AND (`DateTo` IS NULL);',
+            self::tableName(),
+            $membershipId
+        );
+        $dbr = mysqli_query($GLOBALS['conn'], $sql);
+        sqlerror();
+        $row = $dbr ? mysqli_fetch_assoc($dbr) : null;
+        return $row ? (int)$row['c'] : 0;
+    }
+
     public static function openType($membershipId, $type, $dateFrom, $note = '') {
         $p = new self();
         $p->Membership = (int)$membershipId;

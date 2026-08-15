@@ -18,6 +18,78 @@ function normalizeHexColor($value) {
     return $value;
 }
 
+/**
+ * Mix two hex colors; $t=0 → $hexA, $t=1 → $hexB.
+ * @param string $hexA
+ * @param string $hexB
+ * @param float $t
+ * @return string
+ */
+function hexMix($hexA, $hexB, $t) {
+    $hexA = normalizeHexColor($hexA);
+    $hexB = normalizeHexColor($hexB);
+    if($hexA === '') {
+        return $hexB !== '' ? $hexB : '#808080';
+    }
+    if($hexB === '') {
+        return $hexA;
+    }
+    $t = max(0.0, min(1.0, (float)$t));
+    $ar = hexdec(substr($hexA, 1, 2));
+    $ag = hexdec(substr($hexA, 3, 2));
+    $ab = hexdec(substr($hexA, 5, 2));
+    $br = hexdec(substr($hexB, 1, 2));
+    $bg = hexdec(substr($hexB, 3, 2));
+    $bb = hexdec(substr($hexB, 5, 2));
+    $r = (int)round($ar + ($br - $ar) * $t);
+    $g = (int)round($ag + ($bg - $ag) * $t);
+    $b = (int)round($ab + ($bb - $ab) * $t);
+    return sprintf('#%02X%02X%02X', $r, $g, $b);
+}
+
+/**
+ * Soft / accent / strong / softOff from a group accent color.
+ * @param string $accentHex
+ * @return array{accent:string,soft:string,strong:string,softOff:string,fg:string}
+ */
+function permissionGroupTonePalette($accentHex) {
+    $accent = normalizeHexColor($accentHex);
+    if($accent === '') {
+        $accent = '#78909C';
+    }
+    return array(
+        'accent' => $accent,
+        'soft' => hexMix($accent, '#FFFFFF', 0.82),
+        'strong' => hexMix($accent, '#FFFFFF', 0.38),
+        'softOff' => hexMix($accent, '#FFFFFF', 0.92),
+        'fg' => '#222222',
+    );
+}
+
+/**
+ * @return array<string,array{accent:string,soft:string,strong:string,softOff:string,fg:string}>
+ */
+function permissionGroupPalettes() {
+    static $cache = null;
+    if($cache !== null) {
+        return $cache;
+    }
+    $cache = array(
+        'system' => permissionGroupTonePalette('#345A95'),
+    );
+    if(class_exists('Permissions')) {
+        foreach(Permissions::permissionGroups() as $group) {
+            $id = isset($group['id']) ? preg_replace('/[^a-z0-9_-]/i', '', (string)$group['id']) : '';
+            if($id === '') {
+                continue;
+            }
+            $accent = isset($group['color']) ? (string)$group['color'] : Permissions::groupColor($id);
+            $cache[$id] = permissionGroupTonePalette($accent);
+        }
+    }
+    return $cache;
+}
+
 /** Map legacy w3 / highway / mvd color classes to hex for &lt;input type="color"&gt;. */
 function w3ColorToHex($class) {
     $map = array(
@@ -125,34 +197,50 @@ function renderConfigColorCss($wrapStyleTag = true) {
 }
 
 /**
- * Melde-parity group chrome colors for MIT permission groups.
+ * Melde-parity group chrome colors for Nav / Heroes / Rechte-Matrix.
  */
 function renderPermissionGroupColorCss($wrapStyleTag = true) {
-    $systemAccent = '#345A95';
-    $systemStrong = '#7F9DC1';
-    $css = '';
-    $css .= '.admin-list-shell:has(.admin-list-hero--system){--page-title-accent:'.$systemAccent.';}';
-    $css .= '.profile-shell .profile-hero.admin-list-hero--system,.w3-container.admin-list-hero--system{background:'.$systemStrong.';border-left-color:'.$systemAccent.';--page-title-accent:'.$systemAccent.';}';
-    $css .= '.app-nav .admin-nav-perm--system{background:#E8EEF5 !important;border-color:'.$systemAccent.';color:#222 !important;}';
-    if(class_exists('Permissions')) {
-        foreach(Permissions::permissionGroups() as $group) {
-            $id = preg_replace('/[^a-z0-9_-]/i', '', (string)$group['id']);
-            if($id === '') {
-                continue;
-            }
-            $hex = isset($group['color']) ? normalizeHexColor($group['color']) : '#42A5F5';
-            // Soft fill for matrix headers/cells (approx. 78% toward white).
-            $r = hexdec(substr($hex, 1, 2));
-            $g = hexdec(substr($hex, 3, 2));
-            $b = hexdec(substr($hex, 5, 2));
-            $soft = sprintf('#%02X%02X%02X', (int)($r + (255 - $r) * 0.78), (int)($g + (255 - $g) * 0.78), (int)($b + (255 - $b) * 0.78));
-            $css .= '.admin-list-shell:has(.admin-list-hero--'.$id.'){--page-title-accent:'.$hex.';}';
-            $css .= '.profile-shell .profile-hero.admin-list-hero--'.$id.',.w3-container.admin-list-hero--'.$id.'{background:'.$soft.';border-left-color:'.$hex.';--page-title-accent:'.$hex.';}';
-            $css .= '.perm-matrix th.perm-group--'.$id.',.perm-matrix td.perm-group--'.$id.'.perm-on{background:'.$soft.';}';
-            $css .= '.perm-matrix th.perm-group--'.$id.'{border-bottom-color:'.$hex.';}';
-            $css .= '.app-nav .admin-nav-perm--'.$id.',.app-nav a[class*="nav-group--'.$id.'"]{--nav-group-accent:'.$hex.';}';
-        }
+    $palettes = permissionGroupPalettes();
+    if(!$palettes) {
+        return '';
     }
+    $css = '';
+    foreach($palettes as $id => $tone) {
+        $soft = $tone['soft'];
+        $accent = $tone['accent'];
+        $strong = $tone['strong'];
+        $softOff = $tone['softOff'];
+        $fg = $tone['fg'];
+
+        $css .= '.app-nav .admin-nav-perm--'.$id
+            .',.profile-perm-tile--'.$id
+            .'{background:'.$soft.' !important;border-color:'.$accent.';color:'.$fg.' !important;}';
+
+        $css .= '.admin-list-shell:has(.admin-list-hero--'.$id.')'
+            .'{--page-title-accent:'.$accent.';}';
+
+        $css .= '.profile-shell .profile-hero.admin-list-hero--'.$id
+            .',.w3-container.admin-list-hero--'.$id
+            .'{background:'.$strong.';border-left-color:'.$accent.';--page-title-accent:'.$accent.';}';
+
+        $css .= '.perm-matrix thead th.perm-group--'.$id
+            .'{background:'.$soft.';box-shadow:inset 0 -3px 0 '.$accent.';}';
+
+        $css .= '.perm-matrix td.perm-group--'.$id.'.perm-off{background:'.$softOff.';}';
+        $css .= '.perm-matrix td.perm-group--'.$id.'.perm-on{background:'.$strong.';}';
+    }
+
+    $css .= '@media (max-width:992px){';
+    foreach($palettes as $id => $tone) {
+        $accent = $tone['accent'];
+        $css .= '.app-nav>.app-nav-primary>.app-nav-item.admin-nav-perm--'.$id
+            .',.app-nav>.app-nav-primary>.app-nav-form>.app-nav-item.admin-nav-perm--'.$id
+            .',.app-nav>.app-nav-primary>.app-nav-cat .admin-nav-perm--'.$id
+            .',.app-nav>.app-nav-more-wrap>.app-nav-more-toggle.admin-nav-perm--'.$id
+            .'{border-top-color:'.$accent.';}';
+    }
+    $css .= '}';
+
     return $wrapStyleTag ? '<style type="text/css" id="perm-group-colors">'.$css.'</style>' : $css;
 }
 
@@ -350,12 +438,15 @@ function adminListSectionGroupId($kicker) {
     $map = array(
         'Mitgliederverwaltung' => 'system',
         'Mitglieder' => 'system',
-        'SEPA' => 'system',
-        'Dokumente' => 'system',
+        'Jubiläen' => 'jubilaeen',
+        'Personen' => 'nutzer',
+        'SEPA' => 'nutzer',
+        'Dokumente' => 'nutzer',
         'System' => 'system',
         'Hilfe' => 'system',
         'Konfiguration' => 'system',
         'Log' => 'system',
+        'Berechtigungen' => 'nutzer',
     );
     $k = trim((string)$kicker);
     return isset($map[$k]) ? $map[$k] : 'system';
@@ -482,6 +573,14 @@ function adminNavGroupActiveClass($pages) {
     if(empty($_SESSION['adminpage'])) {
         return '';
     }
+    return navGroupOpenClass($pages);
+}
+
+/**
+ * Open/highlight a primary-nav accordion group when one of $pages is current.
+ * @param string[] $pages
+ */
+function navGroupOpenClass($pages) {
     $current = isset($_SESSION['page']) ? (string)$_SESSION['page'] : '';
     if($current === '') {
         return '';

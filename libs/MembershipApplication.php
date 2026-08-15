@@ -294,6 +294,23 @@ class MembershipApplication
         return $this->save();
     }
 
+    public function delete() {
+        if((int)$this->Index < 1) {
+            return false;
+        }
+        if(class_exists('MembershipForm') && trim((string)$this->ScanFile) !== '') {
+            MembershipForm::deleteScan($this);
+        }
+        if(class_exists('Log')) {
+            $log = new Log();
+            $log->DBdelete($this->getVars());
+        }
+        $sql = sprintf('DELETE FROM `%s` WHERE `Index` = %d LIMIT 1;', self::tableName(), (int)$this->Index);
+        $ok = mysqli_query($GLOBALS['conn'], $sql);
+        sqlerror();
+        return (bool)$ok;
+    }
+
     protected function insert() {
         $sql = sprintf(
             'INSERT INTO `%s` (`User`, `DesiredType`, `DesiredEntryDate`, `AnnualFeeCents`, `Birthday`, `Phone`, `Phone2`, `Street`, `Zip`, `City`, `Country`, `AccountHolder`, `BankName`, `Iban`, `Bic`, `PaymentMethod`, `ScanFile`, `Status`, `Note`)
