@@ -2,6 +2,10 @@
 
 Automatisch aus Git-Release-Commits erzeugt.
 
+## 2026-08-15-28ccc (2026-08-15)
+
+- Fix membership scan upload: find file input outside the form.
+
 ## 2026-08-15-cbd71 (2026-08-15)
 
 - MIT-16: Membership periods, Beitrittsformular, and person workflow.
