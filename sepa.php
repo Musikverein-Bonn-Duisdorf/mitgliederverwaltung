@@ -6,6 +6,7 @@ $_SESSION['adminpage'] = false;
 include 'common/header.php';
 requirePermission('perm_showUsers');
 
+MembershipPeriod::wipeDueBankDataForAllUsers();
 $mandates = SepaMandate::listAll();
 $n = count($mandates);
 $today = date('Y-m-d');

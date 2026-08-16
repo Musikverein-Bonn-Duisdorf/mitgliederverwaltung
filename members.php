@@ -12,7 +12,6 @@ if(!in_array($filter, array('all', 'member', 'aktiv', 'foerdernd', 'none', 'rete
 }
 $rows = IdentityUser::listHub($filter);
 $n = count($rows);
-$canEdit = hasPermission('perm_editUsers');
 
 $filterLinks = array(
     'all' => 'Alle',
@@ -23,12 +22,7 @@ $filterLinks = array(
     'retention_due' => 'Löschung fällig',
 );
 
-$actions = '';
-if($canEdit) {
-    $actions = '<a class="w3-button '.h($optionsDB['colorBtnSubmit']).'" href="new-person.php"><i class="fas fa-plus"></i> Neu</a>';
-}
-
-adminListPageBegin('Personen', 'Personen ('.$n.')', array('actionsHtml' => $actions));
+adminListPageBegin('Personen', 'Personen ('.$n.')');
 adminListSearchField('Name, Email, Typ…', array('onkeyup' => 'filterListRows()'));
 ?>
 <div id="listHeader" class="inv-sort-bar">

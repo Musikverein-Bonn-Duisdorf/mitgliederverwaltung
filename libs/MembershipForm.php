@@ -94,10 +94,8 @@ class MembershipForm
         if(!empty($file['error']) && (int)$file['error'] !== UPLOAD_ERR_OK) {
             return false;
         }
-        $orig = isset($file['name']) ? (string)$file['name'] : 'scan';
-        $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
-        $allowed = array('pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp');
-        if(!in_array($ext, $allowed, true)) {
+        $ext = self::uploadExtension($file);
+        if($ext === null) {
             return false;
         }
         $dir = self::storageDir($applicationId);
@@ -115,6 +113,45 @@ class MembershipForm
             return false;
         }
         return $name;
+    }
+
+    /**
+     * Resolve allowed scan/doc extension from filename and/or file contents.
+     * Accepts PDF, JPEG, PNG (also gif/webp).
+     * @param array $file $_FILES entry
+     * @return string|null normalized extension (jpg not jpeg)
+     */
+    public static function uploadExtension(array $file) {
+        $orig = isset($file['name']) ? (string)$file['name'] : 'scan';
+        $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
+        if($ext === 'jpeg') {
+            $ext = 'jpg';
+        }
+        $allowed = array('pdf', 'jpg', 'png', 'gif', 'webp');
+        if(in_array($ext, $allowed, true)) {
+            return $ext;
+        }
+        $tmp = isset($file['tmp_name']) ? (string)$file['tmp_name'] : '';
+        if($tmp === '' || !is_file($tmp)) {
+            return null;
+        }
+        $mime = '';
+        if(function_exists('finfo_open')) {
+            $fi = finfo_open(FILEINFO_MIME_TYPE);
+            if($fi) {
+                $mime = (string)finfo_file($fi, $tmp);
+                finfo_close($fi);
+            }
+        }
+        $byMime = array(
+            'application/pdf' => 'pdf',
+            'image/jpeg' => 'jpg',
+            'image/pjpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+        );
+        return isset($byMime[$mime]) ? $byMime[$mime] : null;
     }
 
     public static function deleteScan(MembershipApplication $app) {
@@ -355,18 +392,19 @@ class MembershipForm
     /**
      * @param int|null $individualCents
      * @param string $type
+     * @param bool $reduced
      * @return array{intro:list<string>,mandate:list<string>,note:string}
      */
-    public static function sepaTextsHtml($individualCents = null, $type = 'aktiv') {
+    public static function sepaTextsHtml($individualCents = null, $type = 'aktiv', $reduced = false) {
         $type = ($type === 'foerdernd') ? 'foerdernd' : 'aktiv';
         $fee = self::clampFeeCents(
-            $individualCents !== null ? (int)$individualCents : self::minFeeCents($type),
-            $type
+            $individualCents !== null ? (int)$individualCents : self::minFeeCents($type, $reduced),
+            $type,
+            $reduced
         );
-        $feeHtml = '<strong class="loan-form-em">'.htmlspecialchars(self::formatEuroFromCents($fee), ENT_QUOTES, 'UTF-8').'</strong>';
         $vars = array(
             'org' => self::em(self::orgName()),
-            'fee' => $feeHtml,
+            'fee' => self::feeLiveHtml($fee),
         );
         $noteParas = self::formTextParagraphsHtml('membershipFormSepaNote', $vars);
         return array(
@@ -379,19 +417,27 @@ class MembershipForm
     /**
      * @param int|null $individualCents
      * @param string $type
+     * @param bool $reduced
      * @return list<string>
      */
-    public static function transferTextsHtml($individualCents = null, $type = 'aktiv') {
+    public static function transferTextsHtml($individualCents = null, $type = 'aktiv', $reduced = false) {
         $type = ($type === 'foerdernd') ? 'foerdernd' : 'aktiv';
         $fee = self::clampFeeCents(
-            $individualCents !== null ? (int)$individualCents : self::minFeeCents($type),
-            $type
+            $individualCents !== null ? (int)$individualCents : self::minFeeCents($type, $reduced),
+            $type,
+            $reduced
         );
-        $feeHtml = '<strong class="loan-form-em">'.htmlspecialchars(self::formatEuroFromCents($fee), ENT_QUOTES, 'UTF-8').'</strong>';
         return self::formTextParagraphsHtml('membershipFormTransfer', array(
             'org' => self::em(self::orgName()),
-            'fee' => $feeHtml,
+            'fee' => self::feeLiveHtml($fee),
         ));
+    }
+
+    /** Jahresbeitrag markup; `.membership-fee-live` is synced by form JS. */
+    public static function feeLiveHtml($cents) {
+        return '<strong class="loan-form-em membership-fee-live">'
+            .htmlspecialchars(self::formatEuroFromCents((int)$cents), ENT_QUOTES, 'UTF-8')
+            .'</strong>';
     }
 
     /** @return bool */

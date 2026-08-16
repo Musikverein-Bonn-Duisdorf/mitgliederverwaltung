@@ -101,7 +101,10 @@ if($action === 'save_profile') {
     $user->Vorname = isset($_POST['vorname']) ? trim((string)$_POST['vorname']) : (string)$user->Vorname;
     $user->Nachname = isset($_POST['nachname']) ? trim((string)$_POST['nachname']) : (string)$user->Nachname;
     $user->Email = isset($_POST['email']) ? trim((string)$_POST['email']) : (string)$user->Email;
-    $user->Email2 = isset($_POST['email2']) ? trim((string)$_POST['email2']) : (string)$user->Email2;
+    // Email2: not edited on person page — leave unchanged unless explicitly posted.
+    if(array_key_exists('email2', $_POST)) {
+        $user->Email2 = trim((string)$_POST['email2']);
+    }
     if(trim((string)$user->Vorname) === '' || trim((string)$user->Nachname) === '') {
         $_SESSION['personFlash'] = 'Vor- und Nachname sind Pflicht.';
         header('Location: person.php?id='.$userId);
@@ -115,13 +118,34 @@ if($action === 'save_profile') {
 
     $profile = new MemberProfile();
     $profile->load_or_create($userId);
-    $profile->Birthday = isset($_POST['birthday']) ? trim((string)$_POST['birthday']) : null;
-    $profile->Phone = isset($_POST['phone']) ? trim((string)$_POST['phone']) : null;
-    $profile->Street = isset($_POST['street']) ? trim((string)$_POST['street']) : null;
-    $profile->Zip = isset($_POST['zip']) ? trim((string)$_POST['zip']) : null;
-    $profile->City = isset($_POST['city']) ? trim((string)$_POST['city']) : null;
-    $profile->Country = isset($_POST['country']) ? trim((string)$_POST['country']) : null;
-    $profile->AccountHolder = isset($_POST['account_holder']) ? trim((string)$_POST['account_holder']) : null;
+    if(array_key_exists('birthday', $_POST)) {
+        $v = trim((string)$_POST['birthday']);
+        $profile->Birthday = ($v !== '') ? $v : null;
+    }
+    if(array_key_exists('phone', $_POST)) {
+        $v = trim((string)$_POST['phone']);
+        $profile->Phone = ($v !== '') ? $v : null;
+    }
+    if(array_key_exists('street', $_POST)) {
+        $v = trim((string)$_POST['street']);
+        $profile->Street = ($v !== '') ? $v : null;
+    }
+    if(array_key_exists('zip', $_POST)) {
+        $v = trim((string)$_POST['zip']);
+        $profile->Zip = ($v !== '') ? $v : null;
+    }
+    if(array_key_exists('city', $_POST)) {
+        $v = trim((string)$_POST['city']);
+        $profile->City = ($v !== '') ? $v : null;
+    }
+    if(array_key_exists('country', $_POST)) {
+        $v = trim((string)$_POST['country']);
+        $profile->Country = ($v !== '') ? $v : null;
+    }
+    if(array_key_exists('account_holder', $_POST)) {
+        $v = trim((string)$_POST['account_holder']);
+        $profile->AccountHolder = ($v !== '') ? $v : null;
+    }
     $profile->save();
 
     $mem = new Membership();
@@ -177,8 +201,12 @@ elseif($action === 'close_tenure') {
     else {
         MembershipPeriod::closeOpenTenure((int)$mem->Index, $to, $reason);
         MembershipTypePeriod::closeOpenType((int)$mem->Index, $to);
-        MembershipPeriod::wipeBankDataForUser($userId);
-        $_SESSION['personFlash'] = 'Austritt erfasst ('.$reason.'). SEPA und Bankverbindung gelöscht.';
+        if(MembershipPeriod::wipeBankDataIfDueForUser($userId)) {
+            $_SESSION['personFlash'] = 'Austritt erfasst ('.$reason.'). SEPA und Bankverbindung gelöscht.';
+        }
+        else {
+            $_SESSION['personFlash'] = 'Austritt erfasst ('.$reason.'). Kontodaten bleiben bis nach dem Austrittstermin.';
+        }
     }
 }
 elseif($action === 'switch_type') {
@@ -231,7 +259,12 @@ elseif($action === 'update_period') {
             $p->ExitReason = $willBeOpen ? null : (in_array($reason, array('austritt', 'tod'), true) ? $reason : 'austritt');
             $p->Note = $note;
             if($p->save()) {
-                $_SESSION['personFlash'] = 'Mitgliedszeit gespeichert.';
+                if(MembershipPeriod::wipeBankDataIfDueForUser($userId)) {
+                    $_SESSION['personFlash'] = 'Mitgliedszeit gespeichert. SEPA und Bankverbindung gelöscht.';
+                }
+                else {
+                    $_SESSION['personFlash'] = 'Mitgliedszeit gespeichert.';
+                }
             }
             else {
                 $_SESSION['personFlash'] = 'Mitgliedszeit konnte nicht gespeichert werden.';
@@ -339,7 +372,6 @@ elseif($action === 'sepa_create' || $action === 'sepa_update') {
     $bankName = isset($_POST['bank_name']) ? trim((string)$_POST['bank_name']) : '';
     $from = isset($_POST['valid_from']) ? trim((string)$_POST['valid_from']) : '';
     $to = isset($_POST['valid_to']) ? trim((string)$_POST['valid_to']) : '';
-    $active = isset($_POST['active']) ? 1 : 0;
     if($from === '') {
         $_SESSION['personFlash'] = 'Gültig-ab ist Pflicht.';
     }
@@ -359,7 +391,7 @@ elseif($action === 'sepa_create' || $action === 'sepa_update') {
         $m->BankName = $bankName !== '' ? $bankName : null;
         $m->ValidFrom = $from;
         $m->ValidTo = ($to === '') ? null : $to;
-        $m->Active = $active;
+        $m->Active = 1;
         if($m->save()) {
             $_SESSION['personFlash'] = $action === 'sepa_create' ? 'SEPA-Mandat angelegt.' : 'SEPA-Mandat gespeichert.';
         }

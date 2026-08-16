@@ -387,6 +387,137 @@ class MembershipPeriod
         return true;
     }
 
+    /**
+     * Wipe bank/SEPA only after membership has ended (day after DateTo, or earlier
+     * exit already in the past). Keeps Kontodaten while exit is still in the future
+     * or on the exit day itself (member on DateTo).
+     * @return bool true if data was wiped
+     */
+    public static function wipeBankDataIfDueForUser($userId, $today = null) {
+        $userId = (int)$userId;
+        $today = self::normalizeDate($today);
+        if($userId < 1) {
+            return false;
+        }
+        if(self::userIsMemberOn($userId, $today)) {
+            return false;
+        }
+        $exit = self::lastExitDateForUser($userId);
+        if($exit === null || $exit > $today) {
+            return false;
+        }
+        $hasBank = false;
+        if(class_exists('SepaMandate') && count(SepaMandate::listForUser($userId)) > 0) {
+            $hasBank = true;
+        }
+        if(!$hasBank && class_exists('MemberProfile')) {
+            $profile = new MemberProfile();
+            if($profile->load_by_user($userId) && trim((string)$profile->AccountHolder) !== '') {
+                $hasBank = true;
+            }
+        }
+        if(!$hasBank) {
+            return false;
+        }
+        return self::wipeBankDataForUser($userId);
+    }
+
+    /**
+     * Opportunistic purge for users that still have bank data after exit.
+     * @return int number of users wiped
+     */
+    public static function wipeDueBankDataForAllUsers($today = null) {
+        $today = self::normalizeDate($today);
+        $seen = array();
+        $n = 0;
+        if(class_exists('SepaMandate')) {
+            foreach(SepaMandate::listAll(5000) as $m) {
+                $uid = (int)$m->User;
+                if($uid < 1 || isset($seen[$uid])) {
+                    continue;
+                }
+                $seen[$uid] = true;
+                if(self::wipeBankDataIfDueForUser($uid, $today)) {
+                    $n++;
+                }
+            }
+        }
+        return $n;
+    }
+
+    /**
+     * Chronological membership timeline events (oldest first).
+     * @param MembershipPeriod[] $periods
+     * @param MembershipTypePeriod[] $typePeriods
+     * @return list<array{date:string,kind:string,chip:string,chipMod:string,note:string,periodId:?int,typePeriodId:?int,exitReason:string}>
+     */
+    public static function timelineEvents(array $periods, array $typePeriods) {
+        $events = array();
+        foreach($periods as $p) {
+            $from = substr((string)$p->DateFrom, 0, 10);
+            if($from === '') {
+                continue;
+            }
+            $pid = (int)$p->Index;
+            $events[] = array(
+                'date' => $from,
+                'kind' => 'entry',
+                'chip' => 'Eintritt',
+                'chipMod' => 'entry',
+                'note' => trim((string)$p->Note),
+                'periodId' => $pid,
+                'typePeriodId' => null,
+                'exitReason' => '',
+                '_ord' => 0,
+            );
+            $to = $p->DateTo ? substr((string)$p->DateTo, 0, 10) : '';
+            if($to !== '') {
+                $reason = trim((string)$p->ExitReason);
+                $events[] = array(
+                    'date' => $to,
+                    'kind' => 'exit',
+                    'chip' => ($reason === 'tod') ? 'Tod' : 'Austritt',
+                    'chipMod' => 'exit',
+                    'note' => trim((string)$p->Note),
+                    'periodId' => $pid,
+                    'typePeriodId' => null,
+                    'exitReason' => $reason,
+                    '_ord' => 2,
+                );
+            }
+        }
+        foreach($typePeriods as $t) {
+            $from = substr((string)$t->DateFrom, 0, 10);
+            if($from === '') {
+                continue;
+            }
+            $type = ((string)$t->Type === 'foerdernd') ? 'foerdernd' : 'aktiv';
+            $events[] = array(
+                'date' => $from,
+                'kind' => 'type',
+                'chip' => ($type === 'foerdernd') ? 'fördernd' : 'aktiv',
+                'chipMod' => $type,
+                'note' => trim((string)$t->Note),
+                'periodId' => null,
+                'typePeriodId' => (int)$t->Index,
+                'exitReason' => '',
+                '_ord' => 1,
+            );
+        }
+        usort($events, function ($a, $b) {
+            $c = strcmp($a['date'], $b['date']);
+            if($c !== 0) {
+                return $c;
+            }
+            return ((int)$a['_ord']) - ((int)$b['_ord']);
+        });
+        foreach($events as &$ev) {
+            unset($ev['_ord']);
+        }
+        unset($ev);
+        return $events;
+    }
+
     public static function normalizeDate($date) {
         if($date === null || $date === '') {
             return date('Y-m-d');

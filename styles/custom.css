@@ -2594,6 +2594,26 @@ a.app-titlebar-logo {
   border-color: #90a4ae;
 }
 
+.mail-recipient-chip--entry {
+  background: #e8f5e9;
+  border-color: #66bb6a;
+}
+
+.mail-recipient-chip--exit {
+  background: #eceff1;
+  border-color: #90a4ae;
+}
+
+.mail-recipient-chip--aktiv {
+  background: #e3f2fd;
+  border-color: #64b5f6;
+}
+
+.mail-recipient-chip--foerdernd {
+  background: #fff3e0;
+  border-color: #ffb74d;
+}
+
 .mail-recipient-chip--mailGroup {
   background: #e3f2fd;
   border-color: #64b5f6;
@@ -4094,6 +4114,25 @@ body.meld-cal-print {
   }
 }
 
+.profile-grid--4 {
+  display: grid;
+  gap: 1.25rem 1.75rem;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+@media (min-width: 720px) {
+  .profile-grid--4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .profile-grid--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .profile-fields-inline {
   display: grid;
   grid-template-columns: minmax(4.5rem, 5.5rem) minmax(0, 1fr) minmax(3.5rem, 4.5rem);
@@ -4108,11 +4147,83 @@ body.meld-cal-print {
 }
 
 .person-page {
-  max-width: 72rem;
+  max-width: 88rem;
 }
 
-.person-stammdaten {
+.person-stammdaten-form {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.person-stammdaten-actions {
+  margin: 1rem 0 0;
+}
+
+.person-col-bank .profile-control {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.person-sepa-list {
+  margin: 0.35rem 0 0.75rem;
+}
+
+.person-sepa-item {
+  padding: 0.55rem 0 !important;
+}
+
+.person-sepa-form {
   margin: 0;
+}
+
+.person-sepa-meta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem 0.65rem;
+  align-items: end;
+}
+
+@media (min-width: 720px) {
+  .person-sepa-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.person-sepa-meta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+}
+
+.person-sepa-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.65rem;
+  margin: 0.35rem 0 0.15rem;
+}
+
+.person-sepa-actions .w3-button {
+  flex: 1 1 auto;
+}
+
+.person-fee-field {
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.person-jubilee--past {
+  opacity: 0.55;
+  color: rgba(0, 0, 0, 0.55);
 }
 
 .person-section {
@@ -4152,6 +4263,10 @@ body.meld-cal-print {
   max-width: 36rem;
 }
 
+.person-col-bank .person-workflow-manual {
+  max-width: none;
+}
+
 .person-workflow-manual > summary {
   cursor: pointer;
   font-size: 0.85rem;
@@ -4169,9 +4284,15 @@ body.meld-cal-print {
 
 .person-action-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.55rem 0.75rem;
   align-items: end;
+}
+
+@media (min-width: 720px) {
+  .person-action-grid {
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  }
 }
 
 .person-action-submit {
@@ -4209,7 +4330,7 @@ body.meld-cal-print {
 }
 
 .person-meta-heading {
-  margin: 0 0 0.45rem;
+  margin: 0.85rem 0 0.45rem;
   font-size: 0.78rem;
   font-weight: 650;
   letter-spacing: 0.04em;
@@ -4250,6 +4371,104 @@ body.meld-cal-print {
   margin: 0.55rem 0 0;
 }
 
+.person-timeline {
+  --timeline-line: 4px;
+  --timeline-dot: 0.75rem;
+  --timeline-pad: 1.15rem;
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0 0 0 var(--timeline-pad);
+  max-width: 40rem;
+  border-left: var(--timeline-line) solid rgba(0, 0, 0, 0.22);
+}
+
+.person-timeline-item {
+  position: relative;
+  padding: 0 0 1rem 0.85rem;
+}
+
+.person-timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.person-timeline-marker {
+  position: absolute;
+  left: calc(-1 * var(--timeline-pad) - (var(--timeline-line) / 2) - (var(--timeline-dot) / 2));
+  top: 0.45rem;
+  width: var(--timeline-dot);
+  height: var(--timeline-dot);
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+}
+
+.person-timeline-body {
+  min-width: 0;
+}
+
+.person-timeline-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+}
+
+.person-timeline-date {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
+  min-width: 6.5rem;
+}
+
+.person-timeline-note {
+  font-size: 0.85rem;
+  opacity: 0.65;
+}
+
+.person-timeline-edit {
+  margin: 0.45rem 0 0;
+}
+
+.person-timeline-edit > summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.person-timeline-edit[open] > summary {
+  margin-bottom: 0.5rem;
+}
+
+.person-timeline-edit .person-period-form {
+  margin-top: 0.25rem;
+}
+
+.person-period-item {
+  padding: 0.65rem 0 !important;
+}
+
+.person-period-form {
+  margin: 0;
+}
+
+.person-period-dates {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem 0.65rem;
+}
+
+@media (min-width: 520px) {
+  .person-period-dates {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.person-period-form .profile-control {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 .person-section-link {
   margin-left: 0.35rem;
   font-size: 0.9em;
@@ -4261,15 +4480,106 @@ body.meld-cal-print {
   margin: 0;
 }
 
+.person-inline-delete {
+  display: inline-block;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
 .person-inline-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.35rem 0.45rem;
   align-items: center;
 }
 
-.person-inline-grid--sepa {
-  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+@media (min-width: 720px) {
+  .person-inline-grid {
+    grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  }
+}
+
+.person-doc-list {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  max-width: 40rem;
+}
+
+.person-doc-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.person-doc-item:last-child {
+  border-bottom: none;
+}
+
+.person-doc-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+
+.person-doc-type {
+  font-weight: 650;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.65;
+  min-width: 6.5rem;
+}
+
+.person-doc-name {
+  word-break: break-word;
+}
+
+.person-doc-date {
+  font-size: 0.85rem;
+  opacity: 0.65;
+}
+
+.person-doc-delete {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.person-doc-upload {
+  margin: 0.75rem 0 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  max-width: 40rem;
+}
+
+.person-doc-upload-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem 0.75rem;
+  align-items: end;
+}
+
+@media (min-width: 720px) {
+  .person-doc-upload-grid {
+    grid-template-columns: minmax(8rem, 10rem) minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+}
+
+.person-doc-upload .profile-control {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.person-doc-upload .profile-actions {
+  margin-top: 0.65rem;
 }
 
 .person-doc-row {
@@ -4278,12 +4588,6 @@ body.meld-cal-print {
   align-items: center;
   gap: 0.35rem 0.55rem;
 }
-
-.person-doc-type {
-  font-weight: 600;
-  min-width: 6.5rem;
-}
-
 
 .person-app-row {
   display: flex;

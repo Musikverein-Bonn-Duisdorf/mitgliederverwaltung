@@ -83,15 +83,44 @@ class JubileeCalendar
      * @return array<int,array{kind:string,label:string,milestone:int,date:string}>
      */
     public static function nextForUser($userId, $fromDate = null, $perKind = 1, $horizonYears = 80) {
+        return self::pickPerKind($userId, $fromDate, $perKind, $horizonYears, false);
+    }
+
+    /**
+     * Most recent past jubilees per category (Geburtstag / Mitgliedschaft).
+     * @return array<int,array{kind:string,label:string,milestone:int,date:string}>
+     */
+    public static function pastForUser($userId, $fromDate = null, $perKind = 1, $horizonYears = 80) {
+        return self::pickPerKind($userId, $fromDate, $perKind, $horizonYears, true);
+    }
+
+    /**
+     * @return array<int,array{kind:string,label:string,milestone:int,date:string}>
+     */
+    protected static function pickPerKind($userId, $fromDate, $perKind, $horizonYears, $past) {
         $userId = (int)$userId;
         $fromDate = MembershipPeriod::normalizeDate($fromDate);
         $perKind = max(1, (int)$perKind);
         $horizonYears = max(1, (int)$horizonYears);
-        $until = date('Y-m-d', strtotime($fromDate.' +'.$horizonYears.' years'));
-        $events = self::eventsForUserInRange($userId, $fromDate, $until);
-        usort($events, function ($a, $b) {
-            return strcmp($a['date'], $b['date']);
-        });
+        if($past) {
+            $start = date('Y-m-d', strtotime($fromDate.' -'.$horizonYears.' years'));
+            // Yesterday so "today" stays in the upcoming list.
+            $end = date('Y-m-d', strtotime($fromDate.' -1 day'));
+            if($end < $start) {
+                return array();
+            }
+            $events = self::eventsForUserInRange($userId, $start, $end);
+            usort($events, function ($a, $b) {
+                return strcmp($b['date'], $a['date']);
+            });
+        }
+        else {
+            $until = date('Y-m-d', strtotime($fromDate.' +'.$horizonYears.' years'));
+            $events = self::eventsForUserInRange($userId, $fromDate, $until);
+            usort($events, function ($a, $b) {
+                return strcmp($a['date'], $b['date']);
+            });
+        }
         $picked = array('birthday' => 0, 'membership' => 0);
         $out = array();
         foreach($events as $ev) {

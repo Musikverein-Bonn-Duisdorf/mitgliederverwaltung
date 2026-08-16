@@ -114,8 +114,6 @@
     if (result.ok) {
       input.classList.add('iban-check--valid');
       input.setAttribute('aria-invalid', 'false');
-      hint.textContent = 'IBAN gültig.';
-      hint.classList.add('iban-check-hint--valid');
       return;
     }
     input.classList.add('iban-check--invalid');

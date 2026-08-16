@@ -68,7 +68,7 @@ if($isPost) {
     $name = MembershipForm::storeUpload($appId, $_FILES['scan'], (int)$app->User, $vorname, $nachname);
     if($name === false) {
         http_response_code(400);
-        echo 'Datei konnte nicht gespeichert werden.';
+        echo 'Datei konnte nicht gespeichert werden (nur PDF, JPEG oder PNG).';
         exit;
     }
     $app->ScanFile = $name;
@@ -84,7 +84,7 @@ if($isPost) {
     if($alreadyApplied || $alreadyMember) {
         $_SESSION['personFlash'] = $alreadyApplied
             ? 'Scan ersetzt und im Dokumentenverzeichnis abgelegt.'
-            : 'Beitritts-PDF archiviert (Mitgliedschaft unverändert).';
+            : 'Scan archiviert (Mitgliedschaft unverändert).';
         header('Location: person.php?id='.$userId);
         exit;
     }

@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__.'/libs/sessionBootstrap.php';
 mitConfigureSession();
-$_SESSION['page'] = 'members';
-$_SESSION['adminpage'] = false;
+$_SESSION['page'] = 'new-person';
+$_SESSION['adminpage'] = true;
 include 'common/header.php';
 requirePermission('perm_editUsers');
 
@@ -13,7 +13,7 @@ if(!empty($_SESSION['personFlash'])) {
 }
 
 $actions = '<a class="w3-button '.h($optionsDB['colorBtnSubmit']).'" href="members.php" title="Zurück"><i class="fas fa-arrow-left"></i></a>';
-adminListPageBegin('Personen', 'Person anlegen', array('actionsHtml' => $actions));
+adminListPageBegin('Admin', 'User anlegen', array('actionsHtml' => $actions));
 adminListChromeClose(false);
 
 if($flash !== '') {

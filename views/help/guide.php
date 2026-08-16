@@ -46,7 +46,7 @@ $sections[] = array(
 '.($showArchivNav ? '<li><i class="fas fa-book"></i> <b>Notenarchiv</b> – Wechsel zum Archiv (Melde-Recht Notenarchiv; SSO über Melde wenn möglich)</li>' : '').'
 <li>Logo oben rechts – öffnet die <b>Vereinshomepage</b> in einem neuen Tab</li>
 <li><i class="fas fa-circle-question"></i> <b>Hilfe</b> – diese Seite inkl. Changelog</li>
-'.($showAdmin ? '<li><i class="fas fa-wrench"></i> <b>Admin</b> – Verwaltung (Konfiguration, Backup, Updater'.($canShowLog ? ', Log' : '').($canEditPermissions ? ', Berechtigungen' : '').') unter Mehr</li>' : '').'
+'.($showAdmin ? '<li><i class="fas fa-wrench"></i> <b>Admin</b> – <b>Nutzer</b> (User anlegen'.($canEditPermissions ? ', Berechtigungen' : '').') und <b>System</b> ('.($canShowLog ? 'Log, ' : '').'Konfiguration, Backup, Updater) unter Mehr; Farben wie Rechte-Gruppen</li>' : '').'
 <li><i class="fas fa-sign-out-alt"></i> <b>Ausloggen</b> – Sitzung beenden</li>
 </ul>
 '
@@ -64,12 +64,12 @@ $sections[] = array(
     'id' => 'personen',
     'title' => 'Personen',
     'body' => '
-<p>Unter <b>Personen</b> siehst du alle nicht gelöschten Melde-User (nicht nur bestehende Mitgliedschaften). Filter: alle / Mitglied heute / <b>Aktiv</b> (Musiker) / <b>Fördernd</b> / kein Mitglied / <b>Löschung fällig</b>. Die Suchzeile filtert nach Name, Email und Typ. Mit Recht <code>perm_editUsers</code> legst du über <b>Neu</b> Personen an (Identity-Zeile in der Meldeliste; Orchesterbetrieb bleibt inaktiv, bis dort gepflegt). Auf <b>Person anlegen</b> kannst du entweder „Anlegen“ (Vor-/Nachname Pflicht → Personenseite) oder direkt <b>Beitrittsformular</b> wählen (auch ohne Angaben); Name, E-Mail und Adresse trägst du dann im Formular ein.</p>
+<p>Unter <b>Personen</b> siehst du alle nicht gelöschten Melde-User (nicht nur bestehende Mitgliedschaften). Filter: alle / Mitglied heute / <b>Aktiv</b> (Musiker) / <b>Fördernd</b> / kein Mitglied / <b>Löschung fällig</b>. Die Suchzeile filtert nach Name, Email und Typ. Mit Recht <code>perm_editUsers</code> legst du unter Admin → Nutzer → <b>User anlegen</b> Personen an (Identity-Zeile in der Meldeliste; Orchesterbetrieb bleibt inaktiv, bis dort gepflegt). Auf <b>User anlegen</b> kannst du entweder „Anlegen“ (Vor-/Nachname Pflicht → Personenseite) oder direkt <b>Beitrittsformular</b> wählen (auch ohne Angaben); Name, E-Mail und Adresse trägst du dann im Formular ein.</p>
 <p>Im Detail pflegst du die <b>vollständigen Stammdaten</b> sowie Mitgliedschaft (Beitritt/Typwechsel/Austritt), SEPA und das <b>Dokumentenverzeichnis</b> der Person. Speichern erfordert <code>perm_editUsers</code>.</p>
 <p>Das <b>Beitrittsformular</b> erreichst du von der Personenseite oder direkt beim Anlegen. Neue Erklärungen kannst du ausfüllen und drucken; alte PDFs oder Scans legst du unter Dokumente mit Typ <b>Beitritt</b> ab (bei Bestandsmitgliedern ohne Änderung der Mitgliedschaft).</p>
 <p><b>Beitritt:</b> Formular öffnen → Name/Kontakt/Adresse/Bank und Beitrag speichern (schreibt Personendaten und Antrag) → Drucken → unterschreiben → Scan hochladen. Der Upload setzt Mitgliedschaft (Datum und Typ vom Formular) und bei SEPA das Mandat. Typwechsel und Austritt erscheinen erst nach Eintritt.</p>
-<p><b>Korrektur:</b> Mitgliedszeiten und Typzeiten im Verlauf nachträglich editieren oder löschen. Angewendete Anträge bleiben editierbar (Scan ersetzen/löschen); Antrag löschen ändert die Mitgliedschaft nicht. SEPA-Mandate auf der Personenseite anlegen, ändern oder löschen.</p>
-<p><b>Austritt/Tod:</b> beendet die Mitgliedschaft und löscht sofort alle SEPA-Mandate sowie den Kontoinhaber. Stammdaten bleiben; nach konfigurierbaren Jahren (Standard 5) erscheint der Hinweis <b>Löschung fällig</b>. Mit <b>Person löschen</b> (nur ohne aktive Mitgliedschaft) entfernst du MIT-Daten und soft-deletest die Melde-Identity.</p>
+<p><b>Korrektur:</b> Im Zeitstrahl unter <b>Mitgliedschaft</b> auf der Personenseite kannst du Eintritt/Austritt und aktiv/fördernd nachträglich anpassen. Der normale Weg bleibt Beitrittsformular, Typwechsel und Austritt. Angewendete Anträge bleiben editierbar (Scan ersetzen/löschen); Antrag löschen ändert die Mitgliedschaft nicht. SEPA-Mandate auf der Personenseite anlegen, ändern oder löschen.</p>
+<p><b>Austritt/Tod:</b> beendet die Mitgliedschaft zum Stichtag. SEPA-Mandate und Kontoinhaber bleiben bis nach dem Austrittstermin und werden danach gelöscht (beim Öffnen der Person bzw. der SEPA-Liste). Stammdaten bleiben; nach konfigurierbaren Jahren (Standard 5) erscheint der Hinweis <b>Löschung fällig</b>. Mit <b>Person löschen</b> (nur ohne aktive Mitgliedschaft) entfernst du MIT-Daten und soft-deletest die Melde-Identity.</p>
 <p><b>Jubiläen:</b> nächste Termine auf der Personenseite (z. B. „40. Geburtstag“, „25 Jahre Mitgliedschaft“). Meilensteine in der Konfiguration: feste Alter bzw. Mitgliedsjahre (Komma-Liste) und Schrittweite danach — Default Geburtstag 10…70, dann alle 5; Mitgliedschaft 20/25/40/45/50, dann alle 5.</p>
 <p>Melde-<b>Active</b> (regelmäßig dabei / keine Karteileiche) bleibt in der Meldeliste und ist nicht der Mitgliedstyp.</p>
 '
@@ -90,7 +90,7 @@ $sections[] = array(
     'title' => 'SEPA',
     'body' => '
 <p>Unter <b>SEPA</b> erscheinen Lastschriftmandate: interne Mandatsreferenz (automatisch vergeben), Person, <b>Mitgliedschaft</b> (Aktiv / Fördernd), maskierte IBAN, Gültigkeit und Mandatsstatus. Anlegen und Korrektur erfolgen auf der <b>Personenseite</b> (IBAN und Kreditinstitut dort unmaskiert editierbar).</p>
-<p>Bei Austritt oder Tod werden Mandate und Kontoinhaber gelöscht.</p>
+<p>Bei Austritt oder Tod werden Mandate und Kontoinhaber erst <b>nach dem Austrittstermin</b> gelöscht (nicht schon bei vorzeitig erfasstem Austritt).</p>
 '
 );
 
@@ -100,7 +100,7 @@ $sections[] = array(
     'visible' => $canShowUsers,
     'body' => '
 <p>Auf der <b>Personenseite</b> liegt das Dokumentenverzeichnis: Typen <b>Beitritt</b>, <b>Austritt</b>, <b>Kommunikation</b>, <b>Sonstiges</b>. Dateien (PDF/Bilder) werden lokal unter <code>uploads/persons/</code> gespeichert. Öffnen und Löschen erfolgen dort.</p>
-<p>Das interaktive <b>Beitrittsformular</b> erreichst du von der Personenseite oder direkt über <b>Person anlegen → Beitrittsformular</b>; ein Scan vom Formular landet zusätzlich als Dokument Typ Beitritt.</p>
+<p>Das interaktive <b>Beitrittsformular</b> erreichst du von der Personenseite oder direkt über <b>Admin → Nutzer → User anlegen → Beitrittsformular</b>; ein Scan vom Formular landet zusätzlich als Dokument Typ Beitritt.</p>
 '
 );
 
@@ -116,20 +116,24 @@ $sections[] = array(
 
 $sections[] = array(
     'id' => 'admin-verwaltung',
-    'title' => 'Admin: Verwaltung',
+    'title' => 'Admin',
     'visible' => $showAdmin,
     'body' => '
+<p>Unter <b>Admin</b> (Melde-Reihenfolge): <b>Nutzer</b> (blau) und <b>System</b> (grau), analog zu den Rechte-Gruppen.</p>
 <ul class="help-list">
-'.($canEditPermissions ? '
-<li><b>Berechtigungen</b> – Matrix für MIT-Rechte in Melde-Reihenfolge (Nutzer: anzeigen/bearbeiten/Rechte; Jubiläen; System: Log) nur für Nutzer mit Melde-Zugang Mitgliederverwaltung. Wenn noch niemand Rechte hat, erhält der erste erfolgreiche Login automatisch alle Rechte</li>
+'.(hasPermission('perm_editUsers') ? '
+<li><b>Nutzer → User anlegen</b> – neue Melde-Identity anlegen (Vor-/Nachname oder direkt Beitrittsformular)</li>
 ' : '').'
-'.($canEditConfig ? '
-<li><b>Konfiguration</b> – Site-Name, URLs, Farben, Farbschema und Beitrittsformular-Texte (Platzhalter <code>{org}</code>, <code>{name}</code>, <code>{fee}</code>, <code>{privacyUrl}</code>; Absätze mit Leerzeile; <code>**fett**</code>). Schema-Version und Schema-Metadaten werden hier nicht bearbeitet</li>
-<li><b>Backup</b> – ZIP mit Versionsinfo und SQL nur für Mitgliedschafts-Tabellen (<code>mit_*</code>), nicht Melde-Identity. Download im Browser; Restore mit CSRF und Bestätigung <code>RESTORE</code>; CLI <code>php scripts/restoreBackup.php … --yes</code>. Erfolgreiche Downloads erscheinen im Log</li>
-<li><b>Updater</b> – Software-Update vom Remote und Datenbank prüfen/reparieren; der Bericht listet nur Änderungen und Probleme. Nach Deploy ggf. „Datenbank reparieren“ für Schema v4 (<code>mit_Permissions</code>)</li>
+'.($canEditPermissions ? '
+<li><b>Nutzer → Berechtigungen</b> – Matrix für MIT-Rechte in Melde-Reihenfolge (Nutzer: anzeigen/bearbeiten/Rechte; Jubiläen; System: Log) nur für Nutzer mit Melde-Zugang Mitgliederverwaltung. Wenn noch niemand Rechte hat, erhält der erste erfolgreiche Login automatisch alle Rechte</li>
 ' : '').'
 '.($canShowLog ? '
-<li><b>Log</b> – Anwendungsprotokoll: Stammdaten, Mitgliedschaftsperioden, Beitrittsanträge, SEPA, Dokumente, Rechte und Config (Server-Suche, Live-Aktualisierung, Nachladen beim Scrollen)</li>
+<li><b>System → Log</b> – Anwendungsprotokoll: Stammdaten, Mitgliedschaftsperioden, Beitrittsanträge, SEPA, Dokumente, Rechte und Config (Server-Suche, Live-Aktualisierung, Nachladen beim Scrollen)</li>
+' : '').'
+'.($canEditConfig ? '
+<li><b>System → Konfiguration</b> – Site-Name, URLs, Farben, Farbschema und Beitrittsformular-Texte (Platzhalter <code>{org}</code>, <code>{name}</code>, <code>{fee}</code>, <code>{privacyUrl}</code>; Absätze mit Leerzeile; <code>**fett**</code>). Schema-Version und Schema-Metadaten werden hier nicht bearbeitet</li>
+<li><b>System → Backup</b> – ZIP mit Versionsinfo und SQL nur für Mitgliedschafts-Tabellen (<code>mit_*</code>), nicht Melde-Identity. Download im Browser; Restore mit CSRF und Bestätigung <code>RESTORE</code>; CLI <code>php scripts/restoreBackup.php … --yes</code>. Erfolgreiche Downloads erscheinen im Log</li>
+<li><b>System → Updater</b> – Software-Update vom Remote und Datenbank prüfen/reparieren; der Bericht listet nur Änderungen und Probleme. Nach Deploy ggf. „Datenbank reparieren“ für Schema v4 (<code>mit_Permissions</code>)</li>
 ' : '').'
 </ul>
 '

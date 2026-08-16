@@ -147,8 +147,8 @@ $feeCents = MembershipForm::clampFeeCents(
     $feeReduced
 );
 $feeEuroInput = number_format($feeCents / 100, 2, '.', '');
-$sepaTexts = MembershipForm::sepaTextsHtml($feeCents, $app->DesiredType);
-$transferTexts = MembershipForm::transferTextsHtml($feeCents, $app->DesiredType);
+$sepaTexts = MembershipForm::sepaTextsHtml($feeCents, $app->DesiredType, $feeReduced);
+$transferTexts = MembershipForm::transferTextsHtml($feeCents, $app->DesiredType, $feeReduced);
 $mediaConsentParas = MembershipForm::mediaConsentParagraphsHtml();
 $vornameInput = MembershipForm::identityNameForInput($user->Vorname, MembershipForm::STUB_VORNAME);
 $nachnameInput = MembershipForm::identityNameForInput($user->Nachname, MembershipForm::STUB_NACHNAME);
@@ -181,8 +181,8 @@ header('Content-Type: text/html; charset=utf-8');
   <div class="loan-form-toolbar no-print">
     <div class="loan-form-toolbar-group">
       <a class="loan-form-btn" href="person.php?id=<?php echo (int)$userId; ?>">Zurück</a>
-      <button type="button" class="loan-form-btn" onclick="window.print()">Drucken</button>
       <button type="submit" form="membership-form-fields" class="loan-form-btn loan-form-btn--primary" name="action" value="saveFields">Speichern</button>
+      <button type="button" class="loan-form-btn" onclick="window.print()">Drucken</button>
 <?php if($statusApplied) { ?>
       <form method="POST" action="savePerson.php" class="loan-form-upload" style="display:inline;" onsubmit="return confirm('Antrag löschen? Mitgliedschaft bleibt unverändert.');">
         <input type="hidden" name="user_id" value="<?php echo (int)$userId; ?>">
@@ -204,8 +204,8 @@ header('Content-Type: text/html; charset=utf-8');
       </div>
 <?php } ?>
       <label class="loan-form-btn loan-form-btn--file">
-        Datei
-        <input type="file" form="membership-form-fields" name="scan" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,application/pdf,image/*">
+        PDF / JPG / PNG
+        <input type="file" form="membership-form-fields" name="scan" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
       </label>
       <button type="submit"
               form="membership-form-fields"
@@ -398,7 +398,7 @@ header('Content-Type: text/html; charset=utf-8');
 <?php } ?>
       <p class="membership-legal">
         Der Jahresbeitrag beträgt
-        <span class="loan-form-field-value<?php echo $applied ? '' : ' loan-form-print-only'; ?>"><strong class="loan-form-em"><?php echo $h(MembershipForm::formatEuroFromCents($feeCents)); ?></strong></span><?php if(!$applied) { ?>
+        <span class="loan-form-field-value<?php echo $applied ? '' : ' loan-form-print-only'; ?>"><?php echo MembershipForm::feeLiveHtml($feeCents); ?></span><?php if(!$applied) { ?>
         <input id="membership-annual-fee"
                class="loan-form-input loan-form-input--short no-print"
                type="number"
@@ -586,6 +586,22 @@ header('Content-Type: text/html; charset=utf-8');
       if (!el) return;
       el.hidden = !on;
     }
+    function formatFeeLive(euroStr) {
+      var n = parseFloat(euroStr);
+      if (isNaN(n)) n = 0;
+      var cents = Math.round(n * 100);
+      var whole = Math.floor(cents / 100);
+      var frac = Math.abs(cents % 100);
+      var wholeStr = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      return wholeStr + ',' + (frac < 10 ? '0' : '') + frac + ' €';
+    }
+    function syncFeeDisplays() {
+      if (!fee) return;
+      var text = formatFeeLive(fee.value);
+      document.querySelectorAll('.membership-fee-live').forEach(function (el) {
+        el.textContent = text;
+      });
+    }
     function sync() {
       var type = selectedType();
       var pay = selectedPay();
@@ -605,6 +621,7 @@ header('Content-Type: text/html; charset=utf-8');
       if (isNaN(cur) || cur * 100 < minC - 0.5) {
         fee.value = minEuro;
       }
+      syncFeeDisplays();
     }
     document.querySelectorAll('input[name="DesiredType"], input[name="PaymentMethod"]').forEach(function (el) {
       el.addEventListener('change', sync);
@@ -615,6 +632,7 @@ header('Content-Type: text/html; charset=utf-8');
         if (feeReduced.checked && fee) {
           fee.value = (minCentsFor(selectedType()) / 100).toFixed(2);
         }
+        syncFeeDisplays();
       });
     }
     if (vorname) {
@@ -650,12 +668,15 @@ header('Content-Type: text/html; charset=utf-8');
         if (isNaN(cur) || cur * 100 < minC - 0.5) {
           fee.value = (minC / 100).toFixed(2);
         }
+        syncFeeDisplays();
       });
+      fee.addEventListener('input', syncFeeDisplays);
     }
     sync();
     initHolderAuto();
     syncDeclareName();
     syncPrintTitle();
+    syncFeeDisplays();
   })();
   </script>
   <script src="<?php echo assetUrl('js/ibanCheck.js'); ?>" data-blz-lookup="blzLookup.php"></script>

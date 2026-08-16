@@ -103,10 +103,19 @@ class Document
             return false;
         }
         $orig = isset($file['name']) ? (string)$file['name'] : 'doc';
-        $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
-        $allowed = array('pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp');
-        if(!in_array($ext, $allowed, true)) {
-            return false;
+        $ext = null;
+        if(class_exists('MembershipForm')) {
+            $ext = MembershipForm::uploadExtension($file);
+        }
+        if($ext === null) {
+            $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
+            if($ext === 'jpeg') {
+                $ext = 'jpg';
+            }
+            $allowed = array('pdf', 'jpg', 'png', 'gif', 'webp');
+            if(!in_array($ext, $allowed, true)) {
+                return false;
+            }
         }
         $dir = self::storageDir($userId);
         if(!is_dir($dir) && !mkdir($dir, 0750, true)) {
