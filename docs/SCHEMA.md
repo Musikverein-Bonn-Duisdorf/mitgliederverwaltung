@@ -21,7 +21,7 @@ Prefix: `mit_`. Identity: `meldeliste_User` (Login/Name/Email). Vollständige St
 
 Schema-Version: siehe `config/schema_version_number.php` (aktuell **7**: Perioden + individueller Beitrag).
 
-Mindestbeiträge: Config `BeitragMindestAktiv` / `BeitragMindestFoerdernd` (Euro, z. B. `20,00`). Individueller Beitrag darf den Mindestsatz des gewählten Typs nicht unterschreiten.
+Mindestbeiträge: Config `BeitragMindestAktiv` / `BeitragMindestFoerdernd` / `BeitragMindestErmaessigt` (Euro; Ermäßigung Studierende/Minderjährige, Standard `10,00`). Flag `FeeReduced` an Membership/Antrag.
 Migration:
 
 1. Schema create/repair (neue Tabellen)

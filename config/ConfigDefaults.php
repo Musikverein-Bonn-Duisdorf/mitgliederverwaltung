@@ -30,6 +30,12 @@ function getConfigDefaults() {
             'Description' => 'Vereinshomepage',
         ),
         array(
+            'Parameter' => 'PrivacyUrl',
+            'Value' => '',
+            'Type' => 'string',
+            'Description' => 'Datenschutz-URL (Beitrittsformular {privacyUrl}; leer = MasterPage)',
+        ),
+        array(
             'Parameter' => 'MasterPageIcon',
             'Value' => 'imgs/MVDLogo32x32.png',
             'Type' => 'string',
@@ -214,6 +220,12 @@ function getConfigDefaults() {
             'Value' => '20,00',
             'Type' => 'string',
             'Description' => 'Mindest-Jahresbeitrag förderndes Mitglied (€)',
+        ),
+        array(
+            'Parameter' => 'BeitragMindestErmaessigt',
+            'Value' => '10,00',
+            'Type' => 'string',
+            'Description' => 'Ermäßigter Mindestbeitrag Studierende/Minderjährige (€)',
         ),
         array(
             'Parameter' => 'membershipRetentionYears',

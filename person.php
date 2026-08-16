@@ -63,8 +63,10 @@ $feeMin = '';
 if($hasMembership) {
     $feeEuro = $membership->AnnualFeeCents !== null
         ? number_format(((int)$membership->AnnualFeeCents) / 100, 2, '.', '')
-        : number_format(MembershipForm::minFeeCents($currentType ?: 'aktiv') / 100, 2, '.', '');
-    $feeMin = number_format(MembershipForm::minFeeCents($currentType ?: 'aktiv') / 100, 2, '.', '');
+        : number_format(MembershipForm::minFeeCents($currentType ?: 'aktiv', (int)$membership->FeeReduced === 1) / 100, 2, '.', '');
+    $feeReducedMem = (int)$membership->FeeReduced === 1;
+    $feeMin = number_format(MembershipForm::minFeeCents($currentType ?: 'aktiv', $feeReducedMem) / 100, 2, '.', '');
+    $feeMinErm = number_format(MembershipForm::minFeeCentsReduced() / 100, 2, '.', '');
 }
 $addr = trim(implode(', ', array_filter(array(
     $profile->Street,
@@ -155,7 +157,10 @@ $entryDateLabel = ($openTenure && $openTenure->DateFrom) ? germanDate($openTenur
 <?php if($hasMembership) { ?>
       <div class="profile-field">
         <label class="profile-label" for="person-fee">Jahresbeitrag (€)</label>
-        <input id="person-fee" class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="number" name="annual_fee_euro" step="0.01" min="<?php echo h($feeMin); ?>" value="<?php echo h($feeEuro); ?>" inputmode="decimal" />
+        <input id="person-fee" class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="number" name="annual_fee_euro" step="0.01" min="<?php echo h($feeMinErm); ?>" value="<?php echo h($feeEuro); ?>" inputmode="decimal" />
+      </div>
+      <div class="profile-field">
+        <label class="person-check"><input type="checkbox" name="fee_reduced" value="1"<?php echo $feeReducedMem ? ' checked' : ''; ?> /> Ermäßigt (Studierende / Minderjährige)</label>
       </div>
 <?php } ?>
       <div class="profile-actions">
@@ -184,7 +189,7 @@ $entryDateLabel = ($openTenure && $openTenure->DateFrom) ? germanDate($openTenur
     <div class="profile-field"><span class="profile-label">Anschrift</span><div class="profile-value"><?php echo h($addr !== '' ? $addr : '—'); ?></div></div>
     <div class="profile-field"><span class="profile-label">Kontoinhaber</span><div class="profile-value"><?php echo h((string)$profile->AccountHolder ?: '—'); ?></div></div>
 <?php if($hasMembership && $membership->AnnualFeeCents !== null) { ?>
-    <div class="profile-field"><span class="profile-label">Jahresbeitrag</span><div class="profile-value"><?php echo h(MembershipForm::formatEuroFromCents((int)$membership->AnnualFeeCents)); ?></div></div>
+    <div class="profile-field"><span class="profile-label">Jahresbeitrag</span><div class="profile-value"><?php echo h(MembershipForm::formatEuroFromCents((int)$membership->AnnualFeeCents)); ?><?php echo ((int)$membership->FeeReduced === 1) ? ' (ermäßigt)' : ''; ?></div></div>
 <?php } ?>
   </section>
 </div>
@@ -557,6 +562,17 @@ $entryDateLabel = ($openTenure && $openTenure->DateFrom) ? germanDate($openTenur
     </div>
   </div>
 </section>
+<?php if($canEdit && !$isMemberToday) { ?>
+<section class="person-section" aria-labelledby="person-sec-loeschen">
+  <h3 id="person-sec-loeschen" class="profile-col-title">Löschen</h3>
+  <form method="post" action="savePerson.php" onsubmit="return confirm('Person unwiderruflich löschen? Mitgliedschaftsdaten, SEPA, Dokumente und Stammdaten werden entfernt.');">
+    <?php echo csrf_field(); ?>
+    <input type="hidden" name="user_id" value="<?php echo (int)$userId; ?>" />
+    <input type="hidden" name="action" value="delete_person" />
+    <button type="submit" class="w3-button <?php echo h($optionsDB['colorLogError']); ?>">Person löschen</button>
+  </form>
+</section>
+<?php } ?>
 </div>
 <?php
 adminListPageEnd();

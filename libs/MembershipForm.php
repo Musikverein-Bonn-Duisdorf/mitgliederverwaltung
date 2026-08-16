@@ -148,12 +148,24 @@ class MembershipForm
     }
 
     public static function privacyUrl() {
-        $master = self::cfg('MasterPage', 'https://www.musikverein-bonn-duisdorf.de');
-        $master = rtrim($master, '/');
-        if($master === '' || $master === 'https://example.org') {
-            return 'https://www.musikverein-bonn-duisdorf.de';
+        $url = self::cfg('PrivacyUrl', '');
+        if($url === '') {
+            $url = self::cfg('MasterPage', '');
         }
-        return $master;
+        $url = rtrim(trim((string)$url), '/');
+        if($url === '' || $url === 'https://example.org') {
+            return '';
+        }
+        return $url;
+    }
+
+    public static function privacyLinkHtml() {
+        $raw = self::privacyUrl();
+        if($raw === '') {
+            return '';
+        }
+        $url = htmlspecialchars($raw, ENT_QUOTES, 'UTF-8');
+        return '<a href="'.$url.'">'.$url.'</a>';
     }
 
     /**
@@ -169,8 +181,11 @@ class MembershipForm
         );
     }
 
-    /** Mindestbeitrag in Cent für Typ aktiv|foerdernd (Config in €). */
-    public static function minFeeCents($type) {
+    /** Mindestbeitrag in Cent (Config in €). $reduced → ermäßigt (Studierende/Minderjährige). */
+    public static function minFeeCents($type, $reduced = false) {
+        if($reduced) {
+            return self::minFeeCentsReduced();
+        }
         $type = strtolower(trim((string)$type));
         $euroKey = ($type === 'foerdernd') ? 'BeitragMindestFoerdernd' : 'BeitragMindestAktiv';
         $centKey = ($type === 'foerdernd') ? 'BeitragMindestFoerderndCents' : 'BeitragMindestAktivCents';
@@ -187,11 +202,25 @@ class MembershipForm
         return $parsed !== null ? max(0, $parsed) : 2000;
     }
 
-    /** @return array{aktiv:int,foerdernd:int} */
+    /** Ermäßigter Mindestbeitrag (Studierende/Minderjährige), Config BeitragMindestErmaessigt. */
+    public static function minFeeCentsReduced() {
+        if(isset($GLOBALS['optionsDB']['BeitragMindestErmaessigt'])
+            && trim((string)$GLOBALS['optionsDB']['BeitragMindestErmaessigt']) !== '') {
+            $parsed = self::parseEuroToCents($GLOBALS['optionsDB']['BeitragMindestErmaessigt']);
+            if($parsed !== null) {
+                return max(0, $parsed);
+            }
+        }
+        $parsed = self::parseEuroToCents('10,00');
+        return $parsed !== null ? max(0, $parsed) : 1000;
+    }
+
+    /** @return array{aktiv:int,foerdernd:int,ermaessigt:int} */
     public static function minFeeCentsByType() {
         return array(
-            'aktiv' => self::minFeeCents('aktiv'),
-            'foerdernd' => self::minFeeCents('foerdernd'),
+            'aktiv' => self::minFeeCents('aktiv', false),
+            'foerdernd' => self::minFeeCents('foerdernd', false),
+            'ermaessigt' => self::minFeeCentsReduced(),
         );
     }
 
@@ -228,9 +257,9 @@ class MembershipForm
         return (int)round(((float)$s) * 100);
     }
 
-    /** Individual fee at least the type minimum. */
-    public static function clampFeeCents($cents, $type) {
-        $min = self::minFeeCents($type);
+    /** Individual fee at least the applicable minimum (standard or ermäßigt). */
+    public static function clampFeeCents($cents, $type, $reduced = false) {
+        $min = self::minFeeCents($type, $reduced);
         $cents = (int)$cents;
         if($cents < $min) {
             return $min;
@@ -289,11 +318,6 @@ class MembershipForm
             $out[] = self::formatFormTemplate(self::formText($key), $htmlVars);
         }
         return $out;
-    }
-
-    public static function privacyLinkHtml() {
-        $url = htmlspecialchars(self::privacyUrl(), ENT_QUOTES, 'UTF-8');
-        return '<a href="'.$url.'">'.$url.'</a>';
     }
 
     public static function leadSentenceHtml($nameHtml) {
@@ -421,27 +445,33 @@ class MembershipForm
                 if($mem->AnnualFeeCents !== null && (int)$mem->AnnualFeeCents > 0) {
                     $app->AnnualFeeCents = (int)$mem->AnnualFeeCents;
                 }
+                if((int)$mem->FeeReduced === 1) {
+                    $app->FeeReduced = 1;
+                }
             }
         }
         if($app->DesiredEntryDate === null || $app->DesiredEntryDate === '') {
             $app->DesiredEntryDate = date('Y-m-d');
         }
+        $reduced = (int)$app->FeeReduced === 1;
         if($app->AnnualFeeCents === null || (int)$app->AnnualFeeCents < 1) {
-            $app->AnnualFeeCents = self::minFeeCents($app->DesiredType);
+            $app->AnnualFeeCents = self::minFeeCents($app->DesiredType, $reduced);
         }
-        $app->AnnualFeeCents = self::clampFeeCents((int)$app->AnnualFeeCents, $app->DesiredType);
+        $app->AnnualFeeCents = self::clampFeeCents((int)$app->AnnualFeeCents, $app->DesiredType, $reduced);
     }
 
     public static function applyPostFields(MembershipApplication $app, array $post) {
         $app->DesiredType = isset($post['DesiredType']) ? $post['DesiredType'] : 'aktiv';
         $app->PaymentMethod = isset($post['PaymentMethod']) ? $post['PaymentMethod'] : 'sepa';
+        $app->FeeReduced = !empty($post['FeeReduced']) ? 1 : 0;
         $app->DesiredEntryDate = isset($post['DesiredEntryDate']) ? trim((string)$post['DesiredEntryDate']) : null;
         $feeRaw = isset($post['AnnualFeeEuro']) ? $post['AnnualFeeEuro'] : null;
+        $reduced = (int)$app->FeeReduced === 1;
         $parsed = self::parseEuroToCents($feeRaw);
         if($parsed === null) {
-            $parsed = self::minFeeCents($app->DesiredType);
+            $parsed = self::minFeeCents($app->DesiredType, $reduced);
         }
-        $app->AnnualFeeCents = self::clampFeeCents($parsed, $app->DesiredType);
+        $app->AnnualFeeCents = self::clampFeeCents($parsed, $app->DesiredType, $reduced);
         $app->Birthday = isset($post['Birthday']) ? trim((string)$post['Birthday']) : null;
         $app->Phone = isset($post['Phone']) ? trim((string)$post['Phone']) : null;
         $app->Street = isset($post['Street']) ? trim((string)$post['Street']) : null;

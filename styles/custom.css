@@ -6193,3 +6193,8 @@ input.js-iban-check.iban-check--invalid {
 .person-modal-sepa-ref {
   font-weight: 600;
 }
+
+.person-modal-sepa-iban {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}

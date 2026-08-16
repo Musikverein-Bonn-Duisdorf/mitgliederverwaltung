@@ -9,6 +9,7 @@ class Membership
         'Index' => null,
         'User' => null,
         'AnnualFeeCents' => null,
+        'FeeReduced' => 0,
     );
 
     public function __get($key) {
@@ -25,6 +26,10 @@ class Membership
                 return;
             }
             $this->_data[$key] = max(0, (int)$val);
+            return;
+        }
+        if($key === 'FeeReduced') {
+            $this->_data[$key] = ((int)$val) ? 1 : 0;
             return;
         }
         $this->_data[$key] = (int)$val;
@@ -158,10 +163,11 @@ class Membership
                 $log->DBupdate($this->getChanges());
             }
             $sql = sprintf(
-                'UPDATE `%s` SET `User` = %d, `AnnualFeeCents` = %s WHERE `Index` = %d;',
+                'UPDATE `%s` SET `User` = %d, `AnnualFeeCents` = %s, `FeeReduced` = %d WHERE `Index` = %d;',
                 self::tableName(),
                 (int)$this->User,
                 $feeSql,
+                (int)$this->FeeReduced ? 1 : 0,
                 (int)$this->Index
             );
             $ok = mysqli_query($GLOBALS['conn'], $sql);
@@ -169,10 +175,11 @@ class Membership
             return (bool)$ok;
         }
         $sql = sprintf(
-            'INSERT INTO `%s` (`User`, `AnnualFeeCents`) VALUES (%d, %s);',
+            'INSERT INTO `%s` (`User`, `AnnualFeeCents`, `FeeReduced`) VALUES (%d, %s, %d);',
             self::tableName(),
             (int)$this->User,
-            $feeSql
+            $feeSql,
+            (int)$this->FeeReduced ? 1 : 0
         );
         $ok = mysqli_query($GLOBALS['conn'], $sql);
         sqlerror();

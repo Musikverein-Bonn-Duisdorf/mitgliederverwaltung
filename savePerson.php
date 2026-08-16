@@ -127,11 +127,13 @@ if($action === 'save_profile') {
     $mem = new Membership();
     if($mem->load_by_user($userId) && isset($_POST['annual_fee_euro'])) {
         $type = MembershipTypePeriod::userTypeOn($userId) ?: 'aktiv';
+        $reduced = !empty($_POST['fee_reduced']);
         $parsed = MembershipForm::parseEuroToCents($_POST['annual_fee_euro']);
         if($parsed === null) {
-            $parsed = MembershipForm::minFeeCents($type);
+            $parsed = MembershipForm::minFeeCents($type, $reduced);
         }
-        $mem->AnnualFeeCents = MembershipForm::clampFeeCents($parsed, $type);
+        $mem->FeeReduced = $reduced ? 1 : 0;
+        $mem->AnnualFeeCents = MembershipForm::clampFeeCents($parsed, $type, $reduced);
         $mem->save();
     }
     $_SESSION['personFlash'] = 'Stammdaten gespeichert.';
@@ -402,6 +404,28 @@ elseif($action === 'document_delete') {
     else {
         $_SESSION['personFlash'] = 'Löschen fehlgeschlagen.';
     }
+}
+elseif($action === 'delete_person') {
+    if(!csrf_verify(isset($_POST['csrf_token']) ? (string)$_POST['csrf_token'] : '')) {
+        $_SESSION['personFlash'] = 'Ungültige Sitzung — bitte erneut versuchen.';
+        header('Location: person.php?id='.$userId);
+        exit;
+    }
+    $sessionUid = isset($_SESSION['userid']) ? (int)$_SESSION['userid'] : 0;
+    if($sessionUid > 0 && $sessionUid === $userId) {
+        $_SESSION['personFlash'] = 'Eigenes Konto kann nicht gelöscht werden.';
+        header('Location: person.php?id='.$userId);
+        exit;
+    }
+    $err = $user->purgePerson();
+    if($err !== '') {
+        $_SESSION['personFlash'] = $err;
+        header('Location: person.php?id='.$userId);
+        exit;
+    }
+    $_SESSION['personFlash'] = 'Person gelöscht.';
+    header('Location: members.php');
+    exit;
 }
 
 header('Location: person.php?id='.$userId);

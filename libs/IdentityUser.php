@@ -399,6 +399,174 @@ class IdentityUser
         return $out;
     }
 
+    /**
+     * Melde-compatible soft-delete: anonymize identity, keep Index for FK history elsewhere.
+     * @return bool
+     */
+    public function softDeleteIdentity() {
+        $userId = (int)$this->Index;
+        if($userId < 1) {
+            return false;
+        }
+        $cols = self::userColumns();
+        $sets = array(
+            '`Deleted` = 1',
+            '`Vorname` = "gelöschter"',
+            '`Nachname` = "Benutzer"',
+            '`Email` = ""',
+            '`Email2` = ""',
+            '`login` = ""',
+            '`Passhash` = ""',
+        );
+        if(isset($cols['DeletedOn'])) {
+            $sets[] = '`DeletedOn` = CURRENT_TIMESTAMP';
+        }
+        foreach(array('getMail', 'notifyInbox', 'notifyAppMail', 'notifyAppTerminNew', 'notifyAppTerminChange', 'notifyAppTerminSoon') as $flag) {
+            if(isset($cols[$flag])) {
+                $sets[] = '`'.$flag.'` = 0';
+            }
+        }
+        $sql = sprintf(
+            'UPDATE `%s` SET %s WHERE `Index` = %d AND IFNULL(`Deleted`, 0) != 1 LIMIT 1;',
+            self::tableName('User'),
+            implode(', ', $sets),
+            $userId
+        );
+        try {
+            $ok = mysqli_query($GLOBALS['conn'], $sql);
+        }
+        catch(Throwable $e) {
+            return false;
+        }
+        sqlerror();
+        if(!$ok || mysqli_affected_rows($GLOBALS['conn']) < 1) {
+            return false;
+        }
+        if(class_exists('Log')) {
+            $log = new Log();
+            $log->DBdelete(mitLogUserHeader($userId).', soft-delete (MIT)');
+        }
+        $this->_data['Deleted'] = 1;
+        $this->_data['Vorname'] = 'gelöschter';
+        $this->_data['Nachname'] = 'Benutzer';
+        $this->_data['Email'] = '';
+        $this->_data['Email2'] = '';
+        $this->_data['login'] = '';
+        return true;
+    }
+
+    /**
+     * True if Melde still has open inventory loans for this user (blocks soft-delete).
+     */
+    public function hasMeldeInventoryBlock() {
+        $userId = (int)$this->Index;
+        if($userId < 1 || !isset($GLOBALS['conn'])) {
+            return false;
+        }
+        $ip = isset($GLOBALS['identityPrefix']) ? (string)$GLOBALS['identityPrefix'] : 'meldeliste_';
+        foreach(array(
+            sprintf('SELECT 1 FROM `%sInventories` WHERE `User` = %d LIMIT 1', $ip, $userId),
+            sprintf('SELECT 1 FROM `%sInventoriesLoans` WHERE `User` = %d AND (`Returned` IS NULL OR `Returned` = 0) LIMIT 1', $ip, $userId),
+        ) as $sql) {
+            try {
+                $dbr = mysqli_query($GLOBALS['conn'], $sql);
+            }
+            catch(Throwable $e) {
+                continue;
+            }
+            if($dbr && mysqli_fetch_row($dbr)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Wipe all MIT domain data for this user, then soft-delete Melde identity.
+     * Refuses while membership is open today, or Melde inventory is assigned.
+     * @return string empty on success, else German error
+     */
+    public function purgePerson() {
+        $userId = (int)$this->Index;
+        if($userId < 1) {
+            return 'Person nicht gefunden.';
+        }
+        if((int)$this->Deleted === 1) {
+            return 'Person ist bereits gelöscht.';
+        }
+        if(MembershipPeriod::userIsMemberOn($userId, date('Y-m-d'))) {
+            return 'Zuerst Austritt erfassen — aktive Mitgliedschaft kann nicht gelöscht werden.';
+        }
+        if($this->hasMeldeInventoryBlock()) {
+            return 'In der Meldeliste ist noch Inventar zugewiesen — dort zuerst zurückgeben.';
+        }
+
+        if(class_exists('Document')) {
+            foreach(Document::listForUser($userId) as $doc) {
+                $doc->delete();
+            }
+        }
+        if(class_exists('MembershipApplication')) {
+            foreach(MembershipApplication::listForUser($userId) as $app) {
+                $app->delete();
+            }
+        }
+        if(class_exists('SepaMandate')) {
+            SepaMandate::deleteAllForUser($userId);
+        }
+
+        $mem = new Membership();
+        if($mem->load_by_user($userId)) {
+            $mid = (int)$mem->Index;
+            if(class_exists('MembershipTypePeriod')) {
+                foreach(MembershipTypePeriod::listForMembership($mid) as $tp) {
+                    $tp->delete();
+                }
+            }
+            if(class_exists('MembershipPeriod')) {
+                foreach(MembershipPeriod::listForMembership($mid) as $p) {
+                    $p->delete();
+                }
+            }
+            $mem->delete();
+        }
+
+        $profile = new MemberProfile();
+        if($profile->load_by_user($userId)) {
+            $profile->delete();
+        }
+
+        if(class_exists('Permissions') && Permissions::tableReady()) {
+            $sql = sprintf(
+                'DELETE FROM `%s` WHERE `User` = %d LIMIT 1;',
+                Permissions::tableName(),
+                $userId
+            );
+            try {
+                mysqli_query($GLOBALS['conn'], $sql);
+            }
+            catch(Throwable $e) {
+                // ignore
+            }
+        }
+
+        // Remove empty person upload dir
+        $dir = dirname(__DIR__).'/uploads/persons/'.$userId;
+        if(is_dir($dir)) {
+            foreach(glob($dir.'/*') ?: array() as $f) {
+                if(is_file($f)) {
+                    @unlink($f);
+                }
+            }
+            @rmdir($dir);
+        }
+
+        if(!$this->softDeleteIdentity()) {
+            return 'MIT-Daten gelöscht, Soft-Delete der Identity fehlgeschlagen.';
+        }
+        return '';
+    }
+
     private function fill_from_row($row) {
         foreach(array_keys($this->_data) as $key) {
             if(array_key_exists($key, $row)) {

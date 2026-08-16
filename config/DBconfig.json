@@ -2,7 +2,8 @@
     "Membership": {
         "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
         "User": {"Type": "int"},
-        "AnnualFeeCents": {"Type": "int", "Null": "YES"}
+        "AnnualFeeCents": {"Type": "int", "Null": "YES"},
+        "FeeReduced": {"Type": "tinyint", "Default": "0"}
     },
     "MembershipPeriod": {
         "Index": {"Type": "int", "Extra": "AUTO_INCREMENT"},
@@ -26,6 +27,7 @@
         "DesiredType": {"Type": "text", "Collation": "utf8mb4_unicode_ci"},
         "DesiredEntryDate": {"Type": "date", "Null": "YES"},
         "AnnualFeeCents": {"Type": "int", "Null": "YES"},
+        "FeeReduced": {"Type": "tinyint", "Default": "0"},
         "Birthday": {"Type": "date", "Null": "YES"},
         "Phone": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},
         "Street": {"Type": "text", "Null": "YES", "Collation": "utf8mb4_unicode_ci"},

@@ -224,6 +224,25 @@ class MemberProfile
         return (bool)$ok;
     }
 
+    public function delete() {
+        if((int)$this->Index < 1) {
+            return false;
+        }
+        if(class_exists('Log')) {
+            $log = new Log();
+            $log->DBdelete($this->getVars());
+        }
+        $sql = sprintf('DELETE FROM `%s` WHERE `Index` = %d LIMIT 1;', self::tableName(), (int)$this->Index);
+        try {
+            $ok = mysqli_query($GLOBALS['conn'], $sql);
+        }
+        catch(Throwable $e) {
+            return false;
+        }
+        sqlerror();
+        return (bool)$ok;
+    }
+
     private function fill_from_row($row) {
         foreach(array_keys($this->_data) as $key) {
             if(array_key_exists($key, $row)) {

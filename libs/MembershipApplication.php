@@ -10,6 +10,7 @@ class MembershipApplication
         'DesiredType' => null,
         'DesiredEntryDate' => null,
         'AnnualFeeCents' => null,
+        'FeeReduced' => 0,
         'Birthday' => null,
         'Phone' => null,
         'Street' => null,
@@ -60,6 +61,10 @@ class MembershipApplication
                 return;
             }
             $this->_data[$key] = max(0, (int)$val);
+            return;
+        }
+        if($key === 'FeeReduced') {
+            $this->_data[$key] = ((int)$val) ? 1 : 0;
             return;
         }
         $this->_data[$key] = ($val === '' || $val === null) ? null : trim((string)$val);
@@ -248,10 +253,12 @@ class MembershipApplication
         }
 
         $fee = (int)$this->AnnualFeeCents;
+        $reduced = (int)$this->FeeReduced === 1;
         if(class_exists('MembershipForm')) {
-            $fee = MembershipForm::clampFeeCents($fee, $this->DesiredType);
+            $fee = MembershipForm::clampFeeCents($fee, $this->DesiredType, $reduced);
         }
         $mem->AnnualFeeCents = $fee;
+        $mem->FeeReduced = $reduced ? 1 : 0;
         if(!$mem->save()) {
             return false;
         }
@@ -317,13 +324,14 @@ class MembershipApplication
 
     protected function insert() {
         $sql = sprintf(
-            'INSERT INTO `%s` (`User`, `DesiredType`, `DesiredEntryDate`, `AnnualFeeCents`, `Birthday`, `Phone`, `Street`, `Zip`, `City`, `Country`, `AccountHolder`, `BankName`, `Iban`, `PaymentMethod`, `ScanFile`, `Status`, `Note`)
-             VALUES (%d, "%s", %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "%s", %s, "%s", %s);',
+            'INSERT INTO `%s` (`User`, `DesiredType`, `DesiredEntryDate`, `AnnualFeeCents`, `FeeReduced`, `Birthday`, `Phone`, `Street`, `Zip`, `City`, `Country`, `AccountHolder`, `BankName`, `Iban`, `PaymentMethod`, `ScanFile`, `Status`, `Note`)
+             VALUES (%d, "%s", %s, %s, %d, %s, %s, %s, %s, %s, %s, %s, %s, %s, "%s", %s, "%s", %s);',
             self::tableName(),
             (int)$this->User,
             mysqli_real_escape_string($GLOBALS['conn'], (string)$this->DesiredType),
             mkNULLstr($this->DesiredEntryDate),
             ($this->AnnualFeeCents === null || $this->AnnualFeeCents === '') ? 'NULL' : (string)(int)$this->AnnualFeeCents,
+            (int)$this->FeeReduced ? 1 : 0,
             mkNULLstr($this->Birthday),
             mkNULLstr($this->Phone),
             mkNULLstr($this->Street),
@@ -349,7 +357,7 @@ class MembershipApplication
 
     protected function update() {
         $sql = sprintf(
-            'UPDATE `%s` SET `User` = %d, `DesiredType` = "%s", `DesiredEntryDate` = %s, `AnnualFeeCents` = %s, `Birthday` = %s,
+            'UPDATE `%s` SET `User` = %d, `DesiredType` = "%s", `DesiredEntryDate` = %s, `AnnualFeeCents` = %s, `FeeReduced` = %d, `Birthday` = %s,
              `Phone` = %s, `Street` = %s, `Zip` = %s, `City` = %s, `Country` = %s,
              `AccountHolder` = %s, `BankName` = %s, `Iban` = %s, `PaymentMethod` = "%s", `ScanFile` = %s,
              `Status` = "%s", `AppliedAt` = %s, `Note` = %s WHERE `Index` = %d;',
@@ -358,6 +366,7 @@ class MembershipApplication
             mysqli_real_escape_string($GLOBALS['conn'], (string)$this->DesiredType),
             mkNULLstr($this->DesiredEntryDate),
             ($this->AnnualFeeCents === null || $this->AnnualFeeCents === '') ? 'NULL' : (string)(int)$this->AnnualFeeCents,
+            (int)$this->FeeReduced ? 1 : 0,
             mkNULLstr($this->Birthday),
             mkNULLstr($this->Phone),
             mkNULLstr($this->Street),

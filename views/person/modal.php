@@ -94,17 +94,16 @@ $sepaRows = (isset($sepaRows) && is_array($sepaRows)) ? $sepaRows : array();
 if(count($sepaRows)) {
 ?>
       <div class="profile-field">
-        <span class="profile-label">SEPA</span>
+        <span class="profile-label">IBAN</span>
         <div class="profile-value person-modal-sepa">
 <?php foreach($sepaRows as $sr) {
-    $ref = isset($sr['ref']) ? (string)$sr['ref'] : '';
     $iban = isset($sr['iban']) ? (string)$sr['iban'] : '';
+    $ibanDisp = formatIbanDisplay($iban);
     $valid = isset($sr['valid']) ? (string)$sr['valid'] : '';
     $active = !empty($sr['active']);
     ?>
           <div class="person-modal-sepa-row">
-            <span class="person-modal-sepa-ref"><?php echo h($ref !== '' ? $ref : 'Mandat'); ?></span>
-            <?php echo ibanRevealHtml($iban); ?>
+            <span class="person-modal-sepa-iban"><?php echo h($ibanDisp !== '' ? $ibanDisp : '—'); ?></span>
             <span class="w3-small w3-text-grey"><?php
               echo h($valid);
               echo $active ? ' · aktiv' : ' · inaktiv';

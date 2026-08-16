@@ -139,10 +139,12 @@ $paySepa = ($app->PaymentMethod !== 'ueberweisung');
 $creditor = MembershipForm::creditorBank();
 $privacyParas = MembershipForm::privacyParagraphsHtml();
 $membershipRules = MembershipForm::membershipRulesParagraphsHtml();
+$feeReduced = (int)$app->FeeReduced === 1;
 $minFees = MembershipForm::minFeeCentsByType();
 $feeCents = MembershipForm::clampFeeCents(
-    (int)($app->AnnualFeeCents ?: MembershipForm::minFeeCents($app->DesiredType)),
-    $app->DesiredType
+    (int)($app->AnnualFeeCents ?: MembershipForm::minFeeCents($app->DesiredType, $feeReduced)),
+    $app->DesiredType,
+    $feeReduced
 );
 $feeEuroInput = number_format($feeCents / 100, 2, '.', '');
 $sepaTexts = MembershipForm::sepaTextsHtml($feeCents, $app->DesiredType);
@@ -402,21 +404,31 @@ header('Content-Type: text/html; charset=utf-8');
                type="number"
                name="AnnualFeeEuro"
                step="0.01"
-               min="<?php echo $h(number_format($minFees[$typeAktiv ? 'aktiv' : 'foerdernd'] / 100, 2, '.', '')); ?>"
+               min="<?php echo $h(number_format(($feeReduced ? $minFees['ermaessigt'] : $minFees[$typeAktiv ? 'aktiv' : 'foerdernd']) / 100, 2, '.', '')); ?>"
                value="<?php echo $h($feeEuroInput); ?>"
                data-min-aktiv="<?php echo (int)$minFees['aktiv']; ?>"
                data-min-foerdernd="<?php echo (int)$minFees['foerdernd']; ?>"
+               data-min-ermaessigt="<?php echo (int)$minFees['ermaessigt']; ?>"
                required>
         <span class="loan-form-muted no-print">€</span><?php } ?>
-        pro Jahr. Eintritt zum
+        pro Jahr<?php if($feeReduced) { ?>
+        <span class="loan-form-print-only"> (ermäßigt)</span><?php } ?>. Eintritt zum
 <?php if(!$applied) { ?>
         <input class="loan-form-input loan-form-input--short no-print" type="date" name="DesiredEntryDate" value="<?php echo $h((string)($app->DesiredEntryDate ?: date('Y-m-d'))); ?>" required>
 <?php } ?>
         <span class="<?php echo $applied ? '' : 'loan-form-print-only'; ?>"><strong class="loan-form-em"><?php echo $h(germanDate($app->DesiredEntryDate ?: date('Y-m-d'))); ?></strong></span>.
       </p>
+<?php if(!$applied) { ?>
+      <div class="loan-form-field-row membership-type-row no-print" style="margin:0.25rem 0;">
+        <label class="loan-form-check"><input type="checkbox" name="FeeReduced" id="membership-fee-reduced" value="1"<?php echo $feeReduced ? ' checked' : ''; ?>> Ermäßigt (Studierende / Minderjährige)</label>
+      </div>
+<?php } elseif($feeReduced) { ?>
+      <p class="membership-legal membership-legal--note">Ermäßigter Beitrag (Studierende / Minderjährige).</p>
+<?php } ?>
       <p class="membership-legal membership-legal--note no-print">
         Mindestbeitrag: aktiv <?php echo $h(MembershipForm::formatEuroFromCents($minFees['aktiv'])); ?>,
-        fördernd <?php echo $h(MembershipForm::formatEuroFromCents($minFees['foerdernd'])); ?>.
+        fördernd <?php echo $h(MembershipForm::formatEuroFromCents($minFees['foerdernd'])); ?>,
+        ermäßigt <?php echo $h(MembershipForm::formatEuroFromCents($minFees['ermaessigt'])); ?>.
       </p>
       <div id="membership-legal-pay-sepa"<?php echo $paySepa ? '' : ' hidden'; ?>>
 <?php foreach($sepaTexts['intro'] as $para) { ?>
@@ -551,6 +563,7 @@ header('Content-Type: text/html; charset=utf-8');
         autoHolder = null;
       }
     }
+    var feeReduced = document.getElementById('membership-fee-reduced');
     function selectedType() {
       var aktiv = document.querySelector('input[name="DesiredType"][value="aktiv"]');
       return (aktiv && aktiv.checked) ? 'aktiv' : 'foerdernd';
@@ -563,6 +576,9 @@ header('Content-Type: text/html; charset=utf-8');
     }
     function minCentsFor(type) {
       if (!fee) return 2000;
+      if (feeReduced && feeReduced.checked) {
+        return parseInt(fee.getAttribute('data-min-ermaessigt') || '1000', 10) || 1000;
+      }
       var raw = fee.getAttribute(type === 'foerdernd' ? 'data-min-foerdernd' : 'data-min-aktiv');
       return parseInt(raw || '2000', 10) || 2000;
     }
@@ -593,6 +609,14 @@ header('Content-Type: text/html; charset=utf-8');
     document.querySelectorAll('input[name="DesiredType"], input[name="PaymentMethod"]').forEach(function (el) {
       el.addEventListener('change', sync);
     });
+    if (feeReduced) {
+      feeReduced.addEventListener('change', function () {
+        sync();
+        if (feeReduced.checked && fee) {
+          fee.value = (minCentsFor(selectedType()) / 100).toFixed(2);
+        }
+      });
+    }
     if (vorname) {
       vorname.addEventListener('input', function () {
         syncHolderFromName();

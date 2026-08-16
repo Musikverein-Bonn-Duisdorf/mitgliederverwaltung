@@ -21,6 +21,8 @@
  * v17: Phone2/Handy entfernt — eine Telefonnummer (Phone) reicht
  * v18: Beitrittsformular-Rechtstexte als Config (membershipForm*)
  * v19: Mindestbeitrag Config in € (BeitragMindestAktiv/Foerdernd); *Cents entfernt
+ * v20: PrivacyUrl Config (Datenschutz-Link Beitrittsformular)
+ * v21: Ermäßigter Mindestbeitrag (Config + FeeReduced)
  */
-return 19;
+return 21;
 ?>
