@@ -14,6 +14,13 @@
  * v10: Geburtstags-Jubiläen wie Verein (jubileeBirthdayAges + jubileeBirthdayStepAfter statt JSON-Regel)
  * v11: obsolete Config jubileeBirthdayRule entfernen
  * v12: perm_showJubilees + Berechtigungsgruppe Jubiläen
+ * v13: Bic-Spalten aus SepaMandate + MembershipApplication entfernt (IBAN-only)
+ * v14: SepaMandate.BankName (Kreditinstitut am Mandat)
+ * v15: Document.StoredFile statt NextcloudPath (lokales Personen-Verzeichnis)
+ * v16: perm_showLog (Log anzeigen) in mit_Permissions, Gruppe System
+ * v17: Phone2/Handy entfernt — eine Telefonnummer (Phone) reicht
+ * v18: Beitrittsformular-Rechtstexte als Config (membershipForm*)
+ * v19: Mindestbeitrag Config in € (BeitragMindestAktiv/Foerdernd); *Cents entfernt
  */
-return 12;
+return 19;
 ?>

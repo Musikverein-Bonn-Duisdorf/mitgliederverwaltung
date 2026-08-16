@@ -4,7 +4,7 @@
  * Brand colors: Melde Hex kit (UI-SHELL / PLATFORM white-label).
  */
 function getConfigDefaults() {
-    return array(
+    $items = array(
         array(
             'Parameter' => 'WebSiteName',
             'Value' => 'Mitgliederverwaltung',
@@ -45,7 +45,13 @@ function getConfigDefaults() {
             'Parameter' => 'urlMeldeliste',
             'Value' => '',
             'Type' => 'string',
-            'Description' => 'URL der Meldeliste (Nav-Link)',
+            'Description' => 'Basis-URL Meldeliste (Nav-Link; leer = ausgeblendet)',
+        ),
+        array(
+            'Parameter' => 'urlNotenarchiv',
+            'Value' => '',
+            'Type' => 'string',
+            'Description' => 'Basis-URL Notenarchiv (Nav bei Melde-Recht Notenarchiv; SSO über Meldeliste wenn urlMeldeliste gesetzt)',
         ),
         array(
             'Parameter' => 'MessageOfTheDay',
@@ -198,16 +204,16 @@ function getConfigDefaults() {
             'Description' => 'SEPA-Gläubiger-Identifikationsnummer (CI)',
         ),
         array(
-            'Parameter' => 'BeitragMindestAktivCents',
-            'Value' => '2000',
-            'Type' => 'int',
-            'Description' => 'Mindest-Jahresbeitrag aktives Mitglied (Cent)',
+            'Parameter' => 'BeitragMindestAktiv',
+            'Value' => '20,00',
+            'Type' => 'string',
+            'Description' => 'Mindest-Jahresbeitrag aktives Mitglied (€)',
         ),
         array(
-            'Parameter' => 'BeitragMindestFoerderndCents',
-            'Value' => '2000',
-            'Type' => 'int',
-            'Description' => 'Mindest-Jahresbeitrag förderndes Mitglied (Cent)',
+            'Parameter' => 'BeitragMindestFoerdernd',
+            'Value' => '20,00',
+            'Type' => 'string',
+            'Description' => 'Mindest-Jahresbeitrag förderndes Mitglied (€)',
         ),
         array(
             'Parameter' => 'membershipRetentionYears',
@@ -246,5 +252,28 @@ function getConfigDefaults() {
             'Description' => 'Installierte DB-Schema-Version (Soll: config/SchemaVersion.php)',
         ),
     );
+
+    if(!function_exists('getMembershipFormTextDefaults')) {
+        require_once __DIR__.'/MembershipFormTextDefaults.php';
+    }
+    $labels = array(
+        'membershipFormLead' => 'Beitritt: Einleitung ({name} {org})',
+        'membershipFormRules' => 'Beitritt: Regeln (Absätze leerzeilengetrennt; **fett**)',
+        'membershipFormPrivacy' => 'Beitritt: Datenschutz ({org} {privacyUrl})',
+        'membershipFormMediaConsent' => 'Beitritt: Medien-Einwilligung ({org} {privacyUrl})',
+        'membershipFormSepaIntro' => 'Beitritt: SEPA-Einleitung ({fee})',
+        'membershipFormSepaMandate' => 'Beitritt: SEPA-Mandat ({org})',
+        'membershipFormSepaNote' => 'Beitritt: SEPA-Hinweis',
+        'membershipFormTransfer' => 'Beitritt: Überweisungstext ({fee})',
+    );
+    foreach(getMembershipFormTextDefaults() as $param => $value) {
+        $items[] = array(
+            'Parameter' => $param,
+            'Value' => $value,
+            'Type' => 'text',
+            'Description' => isset($labels[$param]) ? $labels[$param] : ('Beitrittsformular: '.$param),
+        );
+    }
+    return $items;
 }
 ?>

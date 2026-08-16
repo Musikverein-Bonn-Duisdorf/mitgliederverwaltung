@@ -1,6 +1,6 @@
 # Mitgliederverwaltung
 
-Modul der Vereinsplattform für Mitgliedschaften, SEPA-Mandate und Dokumente.
+Modul der Vereinsplattform für Mitgliedschaften, SEPA-Mandate und personenbezogene Dokumente.
 
 - Plattform-Grenzen: [docs/PLATFORM.md](docs/PLATFORM.md)
 - Identity-Vertrag: [docs/IDENTITY.md](docs/IDENTITY.md)

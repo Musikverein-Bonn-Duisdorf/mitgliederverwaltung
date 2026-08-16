@@ -5,7 +5,7 @@ class SepaMandate
         'Index' => null,
         'User' => null,
         'IbanEnc' => null,
-        'Bic' => null,
+        'BankName' => null,
         'MandateRef' => null,
         'ValidFrom' => null,
         'ValidTo' => null,
@@ -24,6 +24,10 @@ class SepaMandate
             $this->_data[$key] = (int)$val;
             return;
         }
+        if($key === 'IbanEnc') {
+            $this->_data[$key] = normalizeIban($val);
+            return;
+        }
         if($key === 'ValidTo' && ($val === '' || $val === null)) {
             $this->_data[$key] = null;
             return;
@@ -34,8 +38,27 @@ class SepaMandate
     public function is_valid() {
         return (int)$this->User > 0
             && $this->IbanEnc !== ''
-            && $this->MandateRef !== ''
+            && isValidIban($this->IbanEnc)
             && $this->ValidFrom !== '';
+    }
+
+    /** Assign MVD-SEPA-{Index}-{Ymd} when empty (after Index is known). */
+    public function ensureMandateRef() {
+        if(trim((string)$this->MandateRef) !== '') {
+            return;
+        }
+        $id = (int)$this->Index;
+        if($id < 1) {
+            return;
+        }
+        $ymd = date('Ymd');
+        if($this->ValidFrom) {
+            $from = preg_replace('/\D/', '', substr((string)$this->ValidFrom, 0, 10));
+            if(strlen($from) === 8) {
+                $ymd = $from;
+            }
+        }
+        $this->MandateRef = 'MVD-SEPA-'.$id.'-'.$ymd;
     }
 
     public function maskedIban() {
@@ -127,7 +150,7 @@ class SepaMandate
         $parts[] = 'SEPA-ID: '.(int)$this->Index;
         $parts[] = logPart('Mandatsreferenz', logEsc($this->MandateRef));
         $parts[] = logPart('IBAN', logEsc(maskIban($this->IbanEnc)));
-        logAppendFilled($parts, 'BIC', $this->Bic);
+        logAppendFilled($parts, 'Kreditinstitut', $this->BankName);
         $parts[] = logPart('Gültig ab', logEsc(germanDate($this->ValidFrom)));
         if($this->ValidTo) {
             $parts[] = logPart('Gültig bis', logEsc(germanDate($this->ValidTo)));
@@ -149,8 +172,8 @@ class SepaMandate
         if((string)$old->IbanEnc !== (string)$this->IbanEnc) {
             $parts[] = 'IBAN: '.logEsc(maskIban($old->IbanEnc)).' &rArr; <b>'.logEsc(maskIban($this->IbanEnc)).'</b>';
         }
-        if((string)$old->Bic !== (string)$this->Bic) {
-            $parts[] = 'BIC: '.logEsc($old->Bic ?: '(leer)').' &rArr; <b>'.logEsc($this->Bic ?: '(leer)').'</b>';
+        if((string)$old->BankName !== (string)$this->BankName) {
+            $parts[] = 'Kreditinstitut: '.logEsc($old->BankName ?: '(leer)').' &rArr; <b>'.logEsc($this->BankName ?: '(leer)').'</b>';
         }
         if((string)$old->ValidFrom !== (string)$this->ValidFrom) {
             $parts[] = 'Gültig ab: '.logEsc(germanDate($old->ValidFrom)).' &rArr; <b>'.logEsc(germanDate($this->ValidFrom)).'</b>';
@@ -174,14 +197,24 @@ class SepaMandate
             return false;
         }
         if((int)$this->Index > 0) {
+            $this->ensureMandateRef();
             if(class_exists('Log')) {
                 $log = new Log();
                 $log->DBupdate($this->getChanges());
             }
             return $this->update();
         }
+        $needRef = trim((string)$this->MandateRef) === '';
+        if($needRef) {
+            $this->MandateRef = 'PENDING';
+        }
         if(!$this->insert()) {
             return false;
+        }
+        if($needRef || $this->MandateRef === 'PENDING') {
+            $this->MandateRef = '';
+            $this->ensureMandateRef();
+            $this->update();
         }
         if(class_exists('Log')) {
             $log = new Log();
@@ -210,11 +243,11 @@ class SepaMandate
 
     protected function insert() {
         $sql = sprintf(
-            'INSERT INTO `%sSepaMandate` (`User`, `IbanEnc`, `Bic`, `MandateRef`, `ValidFrom`, `ValidTo`, `Active`) VALUES (%d, "%s", %s, "%s", %s, %s, %d);',
+            'INSERT INTO `%sSepaMandate` (`User`, `IbanEnc`, `BankName`, `MandateRef`, `ValidFrom`, `ValidTo`, `Active`) VALUES (%d, "%s", %s, "%s", %s, %s, %d);',
             $GLOBALS['dbprefix'],
             (int)$this->User,
             mysqli_real_escape_string($GLOBALS['conn'], (string)$this->IbanEnc),
-            mkNULLstr($this->Bic),
+            mkNULLstr($this->BankName),
             mysqli_real_escape_string($GLOBALS['conn'], (string)$this->MandateRef),
             mkNULLstr($this->ValidFrom),
             mkNULLstr($this->ValidTo),
@@ -231,11 +264,11 @@ class SepaMandate
 
     protected function update() {
         $sql = sprintf(
-            'UPDATE `%sSepaMandate` SET `User` = %d, `IbanEnc` = "%s", `Bic` = %s, `MandateRef` = "%s", `ValidFrom` = %s, `ValidTo` = %s, `Active` = %d WHERE `Index` = %d;',
+            'UPDATE `%sSepaMandate` SET `User` = %d, `IbanEnc` = "%s", `BankName` = %s, `MandateRef` = "%s", `ValidFrom` = %s, `ValidTo` = %s, `Active` = %d WHERE `Index` = %d;',
             $GLOBALS['dbprefix'],
             (int)$this->User,
             mysqli_real_escape_string($GLOBALS['conn'], (string)$this->IbanEnc),
-            mkNULLstr($this->Bic),
+            mkNULLstr($this->BankName),
             mysqli_real_escape_string($GLOBALS['conn'], (string)$this->MandateRef),
             mkNULLstr($this->ValidFrom),
             mkNULLstr($this->ValidTo),

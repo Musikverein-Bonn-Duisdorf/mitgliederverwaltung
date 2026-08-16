@@ -83,6 +83,7 @@ if($nextM > 12) {
   padding: 2px 4px; font-size: 0.7em; line-height: 1.2; text-align: left;
   border: none; border-radius: 2px; color: #fff; text-decoration: none;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: inherit; cursor: pointer;
 }
 .mit-cal-chip--birthday { background: #345A95; }
 .mit-cal-chip--membership { background: #2E7D32; }
@@ -157,23 +158,35 @@ if($view === 'year') {
     <button type="button" class="inv-sort-chip list-sort" data-sort="name" data-type="string">Person</button>
   </div>
 </div>
-<div id="Liste" class="mit-cal-year-list">
+<div id="Liste" class="inv-list">
 <?php if(!$events) { ?>
-  <div class="w3-panel w3-padding">Keine Jubiläen in diesem Jahr.</div>
+  <div class="w3-panel w3-padding inv-list-empty">Keine Jubiläen in diesem Jahr.</div>
 <?php } ?>
 <?php foreach($events as $ev) {
     $title = JubileeCalendar::formatTitle($ev);
     $dateIso = substr((string)$ev['date'], 0, 10);
+    $name = (string)$ev['name'];
+    $isMembership = ($ev['kind'] === 'membership');
     ?>
-  <a class="list-row w3-padding w3-border-bottom w3-block"
-     href="person.php?id=<?php echo (int)$ev['userId']; ?>"
-     data-sort-date="<?php echo h($dateIso); ?>"
-     data-sort-title="<?php echo h($title); ?>"
-     data-sort-name="<?php echo h((string)$ev['name']); ?>">
-    <span><?php echo h(germanDate($ev['date'])); ?></span>
-    <span><?php echo h($title); ?></span>
-    <span><?php echo h((string)$ev['name']); ?></span>
-  </a>
+  <div class="inv-row list-row"
+       role="button" tabindex="0"
+       onclick="openModal('user', <?php echo (int)$ev['userId']; ?>)"
+       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openModal('user', <?php echo (int)$ev['userId']; ?>);}"
+       data-sort-date="<?php echo h($dateIso); ?>"
+       data-sort-title="<?php echo h($title); ?>"
+       data-sort-name="<?php echo h($name); ?>">
+    <div class="inv-id">
+      <div class="inv-reg"><?php echo h(germanDate($ev['date'])); ?></div>
+      <div class="inv-typ"><?php echo $isMembership ? 'Mitgliedschaft' : 'Geburtstag'; ?></div>
+    </div>
+    <div class="inv-rail" aria-hidden="true" style="<?php echo $isMembership ? '--inv-rail-color:#2E7D32' : ''; ?>"></div>
+    <div class="inv-main">
+      <div class="inv-product"><?php echo h($name); ?></div>
+      <div class="inv-meta-line">
+        <span class="inv-meta-item"><span class="inv-meta-k">Jubiläum</span> <?php echo h($title); ?></span>
+      </div>
+    </div>
+  </div>
 <?php } ?>
 </div>
 <script src="<?php echo assetUrl('js/sortList.js'); ?>"></script>
@@ -227,9 +240,9 @@ else {
     $chipClass = ($ev['kind'] === 'membership') ? 'mit-cal-chip--membership' : 'mit-cal-chip--birthday';
     $title = $ev['name'].' · '.JubileeCalendar::formatTitle($ev);
     ?>
-        <a class="mit-cal-chip <?php echo $chipClass; ?>"
-           href="person.php?id=<?php echo (int)$ev['userId']; ?>"
-           title="<?php echo h($title); ?>"><?php echo h(JubileeCalendar::formatChip($ev)); ?></a>
+        <button type="button" class="mit-cal-chip <?php echo $chipClass; ?>"
+           onclick="openModal('user', <?php echo (int)$ev['userId']; ?>)"
+           title="<?php echo h($title); ?>"><?php echo h(JubileeCalendar::formatChip($ev)); ?></button>
 <?php } ?>
     </div>
 <?php

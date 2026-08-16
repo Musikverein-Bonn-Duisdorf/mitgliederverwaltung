@@ -20,6 +20,7 @@ include __DIR__.'/../libs/MembershipTypePeriod.php';
 include __DIR__.'/../libs/MembershipApplication.php';
 include __DIR__.'/../libs/MembershipForm.php';
 include __DIR__.'/../libs/SepaMandate.php';
+include __DIR__.'/../libs/BlzDirectory.php';
 include __DIR__.'/../libs/Document.php';
 include __DIR__.'/../libs/JubileeCalendar.php';
 include __DIR__.'/../libs/ssoTicket.php';

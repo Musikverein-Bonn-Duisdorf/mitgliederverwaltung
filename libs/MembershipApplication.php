@@ -12,7 +12,6 @@ class MembershipApplication
         'AnnualFeeCents' => null,
         'Birthday' => null,
         'Phone' => null,
-        'Phone2' => null,
         'Street' => null,
         'Zip' => null,
         'City' => null,
@@ -20,7 +19,6 @@ class MembershipApplication
         'AccountHolder' => null,
         'BankName' => null,
         'Iban' => null,
-        'Bic' => null,
         'PaymentMethod' => 'sepa',
         'ScanFile' => null,
         'Status' => 'draft',
@@ -263,7 +261,6 @@ class MembershipApplication
         $profile->load_or_create($userId);
         $profile->Birthday = $this->Birthday;
         $profile->Phone = $this->Phone;
-        $profile->Phone2 = $this->Phone2;
         $profile->Street = $this->Street;
         $profile->Zip = $this->Zip;
         $profile->City = $this->City;
@@ -274,12 +271,19 @@ class MembershipApplication
         }
 
         if($this->PaymentMethod === 'sepa' && $this->Iban !== null && $this->Iban !== '') {
-            $iban = preg_replace('/\s+/', '', strtoupper((string)$this->Iban));
+            $iban = normalizeIban((string)$this->Iban);
+            if(!isValidIban($iban)) {
+                return false;
+            }
             $mandate = new SepaMandate();
             $mandate->User = $userId;
             $mandate->IbanEnc = $iban;
-            $mandate->Bic = $this->Bic;
-            $mandate->MandateRef = 'MVD-SEPA-'.(int)$this->Index.'-'.date('Ymd');
+            $bankName = trim((string)$this->BankName);
+            if($bankName === '' && class_exists('BlzDirectory')) {
+                $bankName = BlzDirectory::bankNameFromIban($iban);
+            }
+            $mandate->BankName = $bankName !== '' ? $bankName : null;
+            $mandate->MandateRef = '';
             $mandate->ValidFrom = $entryDate;
             $mandate->ValidTo = null;
             $mandate->Active = 1;
@@ -313,8 +317,8 @@ class MembershipApplication
 
     protected function insert() {
         $sql = sprintf(
-            'INSERT INTO `%s` (`User`, `DesiredType`, `DesiredEntryDate`, `AnnualFeeCents`, `Birthday`, `Phone`, `Phone2`, `Street`, `Zip`, `City`, `Country`, `AccountHolder`, `BankName`, `Iban`, `Bic`, `PaymentMethod`, `ScanFile`, `Status`, `Note`)
-             VALUES (%d, "%s", %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "%s", %s, "%s", %s);',
+            'INSERT INTO `%s` (`User`, `DesiredType`, `DesiredEntryDate`, `AnnualFeeCents`, `Birthday`, `Phone`, `Street`, `Zip`, `City`, `Country`, `AccountHolder`, `BankName`, `Iban`, `PaymentMethod`, `ScanFile`, `Status`, `Note`)
+             VALUES (%d, "%s", %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "%s", %s, "%s", %s);',
             self::tableName(),
             (int)$this->User,
             mysqli_real_escape_string($GLOBALS['conn'], (string)$this->DesiredType),
@@ -322,7 +326,6 @@ class MembershipApplication
             ($this->AnnualFeeCents === null || $this->AnnualFeeCents === '') ? 'NULL' : (string)(int)$this->AnnualFeeCents,
             mkNULLstr($this->Birthday),
             mkNULLstr($this->Phone),
-            mkNULLstr($this->Phone2),
             mkNULLstr($this->Street),
             mkNULLstr($this->Zip),
             mkNULLstr($this->City),
@@ -330,7 +333,6 @@ class MembershipApplication
             mkNULLstr($this->AccountHolder),
             mkNULLstr($this->BankName),
             mkNULLstr($this->Iban),
-            mkNULLstr($this->Bic),
             mysqli_real_escape_string($GLOBALS['conn'], (string)($this->PaymentMethod ?: 'sepa')),
             mkNULLstr($this->ScanFile),
             mysqli_real_escape_string($GLOBALS['conn'], (string)$this->Status),
@@ -348,8 +350,8 @@ class MembershipApplication
     protected function update() {
         $sql = sprintf(
             'UPDATE `%s` SET `User` = %d, `DesiredType` = "%s", `DesiredEntryDate` = %s, `AnnualFeeCents` = %s, `Birthday` = %s,
-             `Phone` = %s, `Phone2` = %s, `Street` = %s, `Zip` = %s, `City` = %s, `Country` = %s,
-             `AccountHolder` = %s, `BankName` = %s, `Iban` = %s, `Bic` = %s, `PaymentMethod` = "%s", `ScanFile` = %s,
+             `Phone` = %s, `Street` = %s, `Zip` = %s, `City` = %s, `Country` = %s,
+             `AccountHolder` = %s, `BankName` = %s, `Iban` = %s, `PaymentMethod` = "%s", `ScanFile` = %s,
              `Status` = "%s", `AppliedAt` = %s, `Note` = %s WHERE `Index` = %d;',
             self::tableName(),
             (int)$this->User,
@@ -358,7 +360,6 @@ class MembershipApplication
             ($this->AnnualFeeCents === null || $this->AnnualFeeCents === '') ? 'NULL' : (string)(int)$this->AnnualFeeCents,
             mkNULLstr($this->Birthday),
             mkNULLstr($this->Phone),
-            mkNULLstr($this->Phone2),
             mkNULLstr($this->Street),
             mkNULLstr($this->Zip),
             mkNULLstr($this->City),
@@ -366,7 +367,6 @@ class MembershipApplication
             mkNULLstr($this->AccountHolder),
             mkNULLstr($this->BankName),
             mkNULLstr($this->Iban),
-            mkNULLstr($this->Bic),
             mysqli_real_escape_string($GLOBALS['conn'], (string)($this->PaymentMethod ?: 'sepa')),
             mkNULLstr($this->ScanFile),
             mysqli_real_escape_string($GLOBALS['conn'], (string)$this->Status),

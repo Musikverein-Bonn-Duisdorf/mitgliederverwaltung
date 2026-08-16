@@ -5,8 +5,9 @@
 - **Melde** behält ein **Subset** für den Orchesterbetrieb: Name/E-Mail (weiter editierbar), Login/Passhash, Instrument, Active (regelmäßig dabei), Gruppen, Rechte, Benachrichtigungen — **kein** Geburtstag/Adresse/Telefon/Mitgliedsnummer.
 - Vereinsmitglied heute = offene Tenure; Typ `aktiv`/`foerdernd` = TypePeriod am Stichtag. Melde-`Active` ≠ MIT-Typ `aktiv`.
 - Modul-Login: Melde `{identityPrefix}Permissions.perm_accessMitgliederverwaltung` (kein Admin-Bypass).
-- In-App-Rechte: `mit_Permissions` (`perm_showUsers`, `perm_editUsers`, `perm_editPermissions`).
+- In-App-Rechte: `mit_Permissions` (`perm_showUsers`, `perm_editUsers`, `perm_showJubilees`, `perm_showLog`, `perm_editPermissions`).
 - Config: `$identityPrefix` (default `meldeliste_`), getrennt von `$dbprefix` (`mit_`).
 - SSO: Einmal-Ticket von Meldeliste (`sso.php`).
+- Sibling-Nav: Config `urlMeldeliste` (Rücklink), `urlNotenarchiv` (nur mit Melde-`perm_accessNotenarchiv`; SSO bevorzugt über Melde-`sso.php`).
 - Fördernde: Melde-User-Zeile existiert; in Melde-Listen ausgeblendet außer bei expliziten Chips (Termine/Inventar) — Filter über aktuelle TypePeriod `foerdernd`.
 - Migration: `migrateMeldeFlagsToMit.php` + `migrateFlagsToPeriods.php` vor/mit Schema-Drop.

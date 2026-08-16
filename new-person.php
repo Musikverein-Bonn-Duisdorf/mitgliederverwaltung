@@ -24,18 +24,17 @@ $inputBg = h($optionsDB['colorInputBackground']);
 ?>
 <form method="post" action="savePerson.php" class="profile-form person-page person-stammdaten">
   <?php echo csrf_field(); ?>
-  <input type="hidden" name="action" value="create_user" />
 
   <div class="profile-grid profile-grid--3">
     <section class="profile-col" aria-labelledby="new-col-person">
       <h3 id="new-col-person" class="profile-col-title">Person</h3>
       <div class="profile-field">
         <label class="profile-label" for="new-vorname">Vorname</label>
-        <input id="new-vorname" class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="text" name="vorname" required autofocus autocomplete="given-name" />
+        <input id="new-vorname" class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="text" name="vorname" autofocus autocomplete="given-name" />
       </div>
       <div class="profile-field">
         <label class="profile-label" for="new-nachname">Nachname</label>
-        <input id="new-nachname" class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="text" name="nachname" required autocomplete="family-name" />
+        <input id="new-nachname" class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="text" name="nachname" autocomplete="family-name" />
       </div>
       <div class="profile-field">
         <label class="profile-label" for="new-birthday">Geburtstag</label>
@@ -61,10 +60,6 @@ $inputBg = h($optionsDB['colorInputBackground']);
         <label class="profile-label" for="new-phone">Telefon</label>
         <input id="new-phone" class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="tel" name="phone" autocomplete="tel" />
       </div>
-      <div class="profile-field">
-        <label class="profile-label" for="new-phone2">Handy</label>
-        <input id="new-phone2" class="w3-input w3-border profile-control <?php echo $inputBg; ?>" type="tel" name="phone2" />
-      </div>
     </section>
 
     <section class="profile-col" aria-labelledby="new-col-adresse">
@@ -88,7 +83,8 @@ $inputBg = h($optionsDB['colorInputBackground']);
         </div>
       </div>
       <div class="profile-actions">
-        <button type="submit" class="w3-button profile-btn-primary <?php echo h($optionsDB['colorBtnSubmit']); ?>">Anlegen</button>
+        <button type="submit" name="action" value="create_user" class="w3-button profile-btn-primary <?php echo h($optionsDB['colorBtnSubmit']); ?>">Anlegen</button>
+        <button type="submit" name="action" value="create_user_to_form" class="w3-button <?php echo h($optionsDB['colorBtnEdit']); ?>" title="Beitrittsformular">Beitrittsformular</button>
       </div>
     </section>
   </div>

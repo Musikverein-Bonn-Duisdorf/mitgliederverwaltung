@@ -11,6 +11,7 @@ class Permissions
         'perm_showUsers' => 0,
         'perm_editUsers' => 0,
         'perm_showJubilees' => 0,
+        'perm_showLog' => 0,
         'perm_editPermissions' => 0,
     );
 
@@ -35,12 +36,13 @@ class Permissions
 
     /** @return string[] */
     public static function permissionKeys() {
-        return array(
-            'perm_showUsers',
-            'perm_editUsers',
-            'perm_showJubilees',
-            'perm_editPermissions',
-        );
+        $keys = array();
+        foreach(self::permissionGroups() as $group) {
+            foreach($group['keys'] as $key) {
+                $keys[] = $key;
+            }
+        }
+        return $keys;
     }
 
     /** @return bool */
@@ -81,14 +83,16 @@ class Permissions
      */
     public static function permissionLabels() {
         return array(
-            'perm_showUsers' => array('short' => 'Lesen', 'label' => 'Nutzerdaten lesen'),
-            'perm_editUsers' => array('short' => 'Schreiben', 'label' => 'Nutzerdaten schreiben'),
-            'perm_showJubilees' => array('short' => 'Jubiläen', 'label' => 'Jubiläen sehen'),
-            'perm_editPermissions' => array('short' => 'Rechte', 'label' => 'Berechtigungen verwalten'),
+            'perm_showUsers' => array('short' => 'User', 'label' => 'Benutzer anzeigen'),
+            'perm_editUsers' => array('short' => 'User+', 'label' => 'Benutzer bearbeiten'),
+            'perm_editPermissions' => array('short' => 'Rechte', 'label' => 'Berechtigungen bearbeiten'),
+            'perm_showJubilees' => array('short' => 'Jubiläen', 'label' => 'Jubiläen anzeigen'),
+            'perm_showLog' => array('short' => 'Log', 'label' => 'Log anzeigen'),
         );
     }
 
     /**
+     * Logical groups: Melde-order Nutzer → Domäne → System.
      * @return array<int,array{id:string,title:string,color:string,keys:string[]}>
      */
     public static function permissionGroups() {
@@ -102,8 +106,14 @@ class Permissions
             array(
                 'id' => 'jubilaeen',
                 'title' => 'Jubiläen',
-                'color' => '#FFA726',
+                'color' => '#66BB6A',
                 'keys' => array('perm_showJubilees'),
+            ),
+            array(
+                'id' => 'system',
+                'title' => 'System',
+                'color' => '#78909C',
+                'keys' => array('perm_showLog'),
             ),
         );
     }
@@ -124,19 +134,24 @@ class Permissions
     }
 
     /**
-     * @return array<int,array{key:string,group:string,short:string,label:string}>
+     * Flat catalog in group sort order (Melde-parity for matrix columns).
+     * @return array<int,array{key:string,label:string,short:string,group:string,groupId:string}>
      */
     public static function permissionCatalog() {
         $labels = self::permissionLabels();
         $out = array();
         foreach(self::permissionGroups() as $group) {
-            foreach($group['keys'] as $key) {
+            $groupId = isset($group['id']) ? (string)$group['id'] : 'sonst';
+            $groupTitle = isset($group['title']) ? (string)$group['title'] : '';
+            $keys = isset($group['keys']) && is_array($group['keys']) ? $group['keys'] : array();
+            foreach($keys as $key) {
                 $meta = isset($labels[$key]) ? $labels[$key] : array('short' => $key, 'label' => $key);
                 $out[] = array(
-                    'key' => $key,
-                    'group' => $group['id'],
-                    'short' => $meta['short'],
-                    'label' => $meta['label'],
+                    'key' => (string)$key,
+                    'label' => (string)$meta['label'],
+                    'short' => (string)$meta['short'],
+                    'group' => $groupTitle,
+                    'groupId' => $groupId,
                 );
             }
         }
@@ -150,7 +165,7 @@ class Permissions
                 return $group['id'];
             }
         }
-        return 'nutzer';
+        return 'system';
     }
 
     public static function tableName() {
@@ -381,12 +396,13 @@ class Permissions
             return false;
         }
         $sql = sprintf(
-            'INSERT INTO `%s` (`User`, `perm_showUsers`, `perm_editUsers`, `perm_showJubilees`, `perm_editPermissions`) VALUES (%d, %d, %d, %d, %d);',
+            'INSERT INTO `%s` (`User`, `perm_showUsers`, `perm_editUsers`, `perm_showJubilees`, `perm_showLog`, `perm_editPermissions`) VALUES (%d, %d, %d, %d, %d, %d);',
             self::tableName(),
             (int)$this->User,
             (int)$this->perm_showUsers,
             (int)$this->perm_editUsers,
             (int)$this->perm_showJubilees,
+            (int)$this->perm_showLog,
             (int)$this->perm_editPermissions
         );
         $ok = self::query($sql);
@@ -409,12 +425,13 @@ class Permissions
             $log->DBupdate($this->getChanges());
         }
         $sql = sprintf(
-            'UPDATE `%s` SET `User` = %d, `perm_showUsers` = %d, `perm_editUsers` = %d, `perm_showJubilees` = %d, `perm_editPermissions` = %d WHERE `Index` = %d;',
+            'UPDATE `%s` SET `User` = %d, `perm_showUsers` = %d, `perm_editUsers` = %d, `perm_showJubilees` = %d, `perm_showLog` = %d, `perm_editPermissions` = %d WHERE `Index` = %d;',
             self::tableName(),
             (int)$this->User,
             (int)$this->perm_showUsers,
             (int)$this->perm_editUsers,
             (int)$this->perm_showJubilees,
+            (int)$this->perm_showLog,
             (int)$this->perm_editPermissions,
             (int)$this->Index
         );
@@ -436,10 +453,11 @@ class Permissions
         $header = mitLogUserHeader((int)$this->User).', MIT-Rechte-ID: '.(int)$this->Index;
         $parts = array();
         $labels = array(
-            'perm_showUsers' => 'Nutzer lesen',
-            'perm_editUsers' => 'Nutzer schreiben',
-            'perm_showJubilees' => 'Jubiläen sehen',
-            'perm_editPermissions' => 'Rechte verwalten',
+            'perm_showUsers' => 'Benutzer anzeigen',
+            'perm_editUsers' => 'Benutzer bearbeiten',
+            'perm_editPermissions' => 'Berechtigungen bearbeiten',
+            'perm_showJubilees' => 'Jubiläen anzeigen',
+            'perm_showLog' => 'Log anzeigen',
         );
         foreach(self::permissionKeys() as $key) {
             if(boolsDiffer($old->$key, $this->$key)) {

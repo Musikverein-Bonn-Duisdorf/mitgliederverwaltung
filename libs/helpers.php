@@ -124,6 +124,37 @@ function getAdminPage($string) {
 }
 
 /**
+ * Admin-Menü-Eintrag: aktive Seite = TitleBar, sonst Berechtigungs-Farbgruppe (Melde-Parität).
+ * @param string $page
+ * @param string $permKey Permissions::* / Ops-Key
+ */
+function getAdminPagePerm($page, $permKey) {
+    $current = isset($_SESSION['page']) ? (string)$_SESSION['page'] : '';
+    if($page === $current && !empty($_SESSION['adminpage'])) {
+        echo isset($GLOBALS['optionsDB']['colorTitleBar']) ? $GLOBALS['optionsDB']['colorTitleBar'] : '';
+        return;
+    }
+    echo adminNavPermClass($permKey);
+}
+
+/**
+ * CSS-Klassen für Admin-Nav aus Rechte-Gruppenfarben.
+ * @param string $permKey
+ * @return string
+ */
+function adminNavPermClass($permKey) {
+    $permKey = (string)$permKey;
+    // Melde-Ops (Config/Backup/Updater) → System-Chrome; Log ist lokales MIT-Recht.
+    if($permKey === 'perm_editConfig') {
+        return navGroupClass('system');
+    }
+    if(class_exists('Permissions') && Permissions::isMitKey($permKey)) {
+        return navGroupClass(Permissions::groupIdForPermission($permKey));
+    }
+    return navGroupClass('system');
+}
+
+/**
  * Melde platform flag: no User.Admin bypass (same as Melde SSO gate).
  * @param int $userId
  * @return bool
@@ -134,6 +165,99 @@ function userMayAccessMitgliederverwaltung($userId) {
         return false;
     }
     return IdentityPermissions::loadForUser($userId)->getPermission('perm_accessMitgliederverwaltung');
+}
+
+/**
+ * Melde platform flag for Notenarchiv (nav link from MIT).
+ * @param int $userId
+ * @return bool
+ */
+function userMayAccessNotenarchiv($userId) {
+    $userId = (int)$userId;
+    if($userId < 1) {
+        return false;
+    }
+    return IdentityPermissions::loadForUser($userId)->getPermission('perm_accessNotenarchiv');
+}
+
+/**
+ * Sibling-module nav hrefs for the current user (Melde = plain URL; Archiv via Melde SSO when possible).
+ * @return array{melde:string,archiv:string}
+ */
+function siblingModuleNavLinks() {
+    $melde = isset($GLOBALS['optionsDB']['urlMeldeliste'])
+        ? trim((string)$GLOBALS['optionsDB']['urlMeldeliste']) : '';
+    $archivBase = isset($GLOBALS['optionsDB']['urlNotenarchiv'])
+        ? trim((string)$GLOBALS['optionsDB']['urlNotenarchiv']) : '';
+    $uid = isset($_SESSION['userid']) ? (int)$_SESSION['userid'] : 0;
+    $archiv = '';
+    if($archivBase !== '' && $uid > 0 && userMayAccessNotenarchiv($uid)) {
+        if($melde !== '') {
+            $archiv = rtrim($melde, '/').'/sso.php?redirect='.rawurlencode($archivBase);
+        }
+        else {
+            $archiv = $archivBase;
+        }
+    }
+    return array(
+        'melde' => $melde,
+        'archiv' => $archiv,
+    );
+}
+
+/**
+ * Compact person modal HTML for ajaxModalHost (not a full page).
+ * @param IdentityUser $user
+ * @return string
+ */
+function mitPersonModalHtml(IdentityUser $user) {
+    $userId = (int)$user->Index;
+    $profile = new MemberProfile();
+    $profile->load_by_user($userId);
+    $today = date('Y-m-d');
+    $isMemberToday = MembershipPeriod::userIsMemberOn($userId, $today);
+    $currentType = $isMemberToday ? MembershipTypePeriod::userTypeOn($userId, $today) : null;
+    $memberLabel = $isMemberToday
+        ? (($currentType === 'foerdernd') ? 'Fördernd' : 'Aktiv')
+        : 'kein Mitglied';
+    $membership = new Membership();
+    $entryDateLabel = '';
+    if($membership->load_by_user($userId)) {
+        $open = MembershipPeriod::openForMembership((int)$membership->Index);
+        if($open && $open->DateFrom) {
+            $entryDateLabel = germanDate($open->DateFrom);
+        }
+    }
+    $addr = trim(implode(', ', array_filter(array(
+        $profile->Street,
+        trim((string)$profile->Zip.' '.$profile->City),
+        $profile->Country,
+    ))));
+    $birthday = (string)$profile->Birthday;
+    $mandates = SepaMandate::listForUser($userId);
+    $sepaRows = array();
+    foreach($mandates as $m) {
+        $sepaRows[] = array(
+            'ref' => (string)$m->MandateRef,
+            'iban' => (string)$m->IbanEnc,
+            'active' => ((int)$m->Active === 1),
+            'valid' => germanDate($m->ValidFrom).($m->ValidTo ? ' – '.germanDate($m->ValidTo) : ''),
+        );
+    }
+    return render('person/modal', array(
+        'user' => $user,
+        'profile' => $profile,
+        'memberLabel' => $memberLabel,
+        'entryDateLabel' => $entryDateLabel,
+        'addr' => $addr,
+        'email' => trim((string)$user->Email),
+        'email2' => trim((string)$user->Email2),
+        'phone' => trim((string)$profile->Phone),
+        'birthdayLabel' => $birthday !== '' ? germanDate($birthday) : '',
+        'sepaRows' => $sepaRows,
+        'showOpenButton' => hasPermission('perm_showUsers'),
+        'canEdit' => hasPermission('perm_editUsers'),
+    ));
 }
 
 /** Clear auth fields without destroying the whole session (flash/errors may remain). */
@@ -195,10 +319,12 @@ function refreshSessionAdmin() {
 
 /**
  * Drop session if logged in without Melde module access.
+ * Do not call loggedIn() here: that session_destroy()s empty sessions and would
+ * prevent validateUser() on login.php from persisting a new login in the same request.
  * @return bool true if still allowed (or not logged in)
  */
 function enforceMitgliederverwaltungAccess() {
-    if(!loggedIn()) {
+    if(!isset($_SESSION['userid']) || (int)$_SESSION['userid'] < 1) {
         return true;
     }
     $uid = (int)$_SESSION['userid'];
@@ -282,8 +408,12 @@ function validateUser($login, $password) {
     return true;
 }
 
+function normalizeIban($ibanEnc) {
+    return preg_replace('/\s+/', '', strtoupper(trim((string)$ibanEnc)));
+}
+
 function maskIban($ibanEnc) {
-    $raw = trim((string)$ibanEnc);
+    $raw = normalizeIban($ibanEnc);
     if($raw === '') {
         return '';
     }
@@ -292,6 +422,95 @@ function maskIban($ibanEnc) {
         return str_repeat('*', $len);
     }
     return str_repeat('*', max(4, $len - 4)).substr($raw, -4);
+}
+
+/** IBAN with groups of 4 for display. */
+function formatIbanDisplay($ibanEnc) {
+    $raw = normalizeIban($ibanEnc);
+    if($raw === '') {
+        return '';
+    }
+    return trim(chunk_split($raw, 4, ' '));
+}
+
+/**
+ * Expected IBAN length by country (ISO 13616). Empty = use 15–34.
+ * @return array<string,int>
+ */
+function ibanCountryLengths() {
+    return array(
+        'AL' => 28, 'AD' => 24, 'AT' => 20, 'AZ' => 28, 'BH' => 22, 'BY' => 28,
+        'BE' => 16, 'BA' => 20, 'BR' => 29, 'BG' => 22, 'CR' => 22, 'HR' => 21,
+        'CY' => 28, 'CZ' => 24, 'DK' => 18, 'DO' => 28, 'EE' => 20, 'FO' => 18,
+        'FI' => 18, 'FR' => 27, 'GE' => 22, 'DE' => 22, 'GI' => 23, 'GR' => 27,
+        'GL' => 18, 'GT' => 28, 'HU' => 28, 'IS' => 26, 'IE' => 22, 'IL' => 23,
+        'IT' => 27, 'JO' => 30, 'KZ' => 20, 'XK' => 20, 'KW' => 30, 'LV' => 21,
+        'LB' => 28, 'LI' => 21, 'LT' => 20, 'LU' => 20, 'MK' => 19, 'MT' => 31,
+        'MR' => 27, 'MU' => 30, 'MD' => 24, 'MC' => 27, 'ME' => 22, 'NL' => 18,
+        'NO' => 15, 'PK' => 24, 'PS' => 29, 'PL' => 28, 'PT' => 25, 'QA' => 29,
+        'RO' => 24, 'SM' => 27, 'SA' => 24, 'RS' => 22, 'SK' => 24, 'SI' => 19,
+        'ES' => 24, 'SE' => 24, 'CH' => 21, 'TN' => 24, 'TR' => 26, 'UA' => 29,
+        'AE' => 23, 'GB' => 22, 'VG' => 24,
+    );
+}
+
+/** MOD-97 IBAN check (ISO 13616). Empty string is invalid. */
+function isValidIban($ibanEnc) {
+    $iban = normalizeIban($ibanEnc);
+    if($iban === '' || !preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]+$/', $iban)) {
+        return false;
+    }
+    $lengths = ibanCountryLengths();
+    $cc = substr($iban, 0, 2);
+    $len = strlen($iban);
+    if(isset($lengths[$cc])) {
+        if($len !== $lengths[$cc]) {
+            return false;
+        }
+    }
+    elseif($len < 15 || $len > 34) {
+        return false;
+    }
+    $rearranged = substr($iban, 4).substr($iban, 0, 4);
+    $expanded = '';
+    $n = strlen($rearranged);
+    for($i = 0; $i < $n; $i++) {
+        $ch = $rearranged[$i];
+        if($ch >= 'A' && $ch <= 'Z') {
+            $expanded .= (string)(ord($ch) - 55);
+        }
+        else {
+            $expanded .= $ch;
+        }
+    }
+    $checksum = 0;
+    $expLen = strlen($expanded);
+    for($i = 0; $i < $expLen; $i++) {
+        $checksum = ($checksum * 10 + (int)$expanded[$i]) % 97;
+    }
+    return $checksum === 1;
+}
+
+/**
+ * Masked IBAN that reveals the full value on click (toggle).
+ * @param string $ibanEnc
+ * @return string HTML
+ */
+function ibanRevealHtml($ibanEnc) {
+    $raw = preg_replace('/\s+/', '', strtoupper(trim((string)$ibanEnc)));
+    if($raw === '') {
+        return '—';
+    }
+    $masked = maskIban($raw);
+    $full = formatIbanDisplay($raw);
+    return '<button type="button" class="iban-reveal"'
+        .' data-iban-full="'.h($full).'"'
+        .' data-iban-masked="'.h($masked).'"'
+        .' data-revealed="0"'
+        .' title="Klicken zum Anzeigen/Verbergen"'
+        .' aria-label="IBAN anzeigen">'
+        .h($masked)
+        .'</button>';
 }
 
 function mkNULLstr($val) {
@@ -548,6 +767,8 @@ function mitIsHiddenConfigParam($parameter) {
         'colorSchemes',
         'SchemaVersion',
         'jubileeBirthdayRule', // obsolete; removed on schema repair
+        'BeitragMindestAktivCents',
+        'BeitragMindestFoerderndCents',
     ), true);
 }
 
@@ -580,7 +801,7 @@ function logMessageHasChanges($message) {
 /**
  * Non-fatal permission check.
  * MIT keys (mit_Permissions): no Melde Admin bypass — only assigned MIT rights (+ bootstrap for editPermissions).
- * Melde ops keys (config/log): Melde User.Admin or Melde Permissions.
+ * Melde ops keys (config): Melde User.Admin or Melde Permissions.
  * @param string $perm e.g. perm_showUsers / perm_editConfig
  * @return bool
  */

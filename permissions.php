@@ -29,13 +29,16 @@ while($row = mysqli_fetch_array($dbr)) {
     if(!$user->load_by_id((int)$row['Index'])) {
         continue;
     }
-    $perm = Permissions::loadByUser((int)$user->Index);
+    $uid = (int)$user->Index;
+    if(!userMayAccessMitgliederverwaltung($uid)) {
+        continue;
+    }
+    $perm = Permissions::loadByUser($uid);
     $rows[] = array(
         'user' => $user,
         'perm' => $perm,
         'name' => $user->getName(),
         'hasAny' => $perm->hasAnyPermission(),
-        'hasAccess' => userMayAccessMitgliederverwaltung((int)$user->Index),
     );
 }
 ?>
@@ -68,7 +71,7 @@ adminListPageBegin('System', 'Berechtigungen', array(
     $gid = Permissions::groupIdForPermission($key);
     $gid = preg_replace('/[^a-z0-9_-]/i', '', (string)$gid);
     if($gid === '') {
-        $gid = 'nutzer';
+        $gid = 'system';
     }
     $labelParts = preg_split('/\s+/u', trim($meta['label']), -1, PREG_SPLIT_NO_EMPTY);
     $labelHtml = htmlspecialchars(implode("\n", $labelParts), ENT_QUOTES, 'UTF-8');
@@ -85,11 +88,10 @@ adminListPageBegin('System', 'Berechtigungen', array(
     $uid = (int)$entry['user']->Index;
     $name = (string)$entry['name'];
     $nameAttr = htmlspecialchars(mb_strtolower($name, 'UTF-8'), ENT_QUOTES, 'UTF-8');
-    $accessBadge = $entry['hasAccess'] ? '' : ' <span class="w3-small w3-text-grey">(kein Modulzugang)</span>';
 ?>
           <tr data-name="<?php echo $nameAttr; ?>" data-has-perms="<?php echo $entry['hasAny'] ? '1' : '0'; ?>">
             <td class="perm-user-col">
-              <?php echo htmlspecialchars($name); ?><?php echo $accessBadge; ?>
+              <?php echo htmlspecialchars($name); ?>
             </td>
 <?php foreach($permKeys as $key) {
     $on = (bool)$entry['perm']->$key;
@@ -98,11 +100,11 @@ adminListPageBegin('System', 'Berechtigungen', array(
     $gid = Permissions::groupIdForPermission($key);
     $gid = preg_replace('/[^a-z0-9_-]/i', '', (string)$gid);
     if($gid === '') {
-        $gid = 'nutzer';
+        $gid = 'system';
     }
     $disabled = $locked;
     $disabledTitle = $locked
-        ? ' title="Eigenes Recht „Berechtigungen verwalten“ kann nicht entfernt werden"'
+        ? ' title="Eigenes Recht „Berechtigungen bearbeiten“ kann nicht entfernt werden"'
         : '';
 ?>
             <td class="perm-cell perm-group perm-group--<?php echo htmlspecialchars($gid, ENT_QUOTES, 'UTF-8'); ?> <?php echo $on ? 'perm-on' : 'perm-off'; ?>" title="<?php echo $title; ?>">
@@ -182,7 +184,7 @@ adminListPageBegin('System', 'Berechtigungen', array(
         data = JSON.parse(xhr.responseText || '{}');
         ok = xhr.status >= 200 && xhr.status < 300 && data && data.ok;
         if(data && data.error === 'cannot_remove_own_edit') {
-          err = 'Eigenes Recht „Berechtigungen verwalten“ kann nicht entfernt werden';
+          err = 'Eigenes Recht „Berechtigungen bearbeiten“ kann nicht entfernt werden';
         }
       } catch(e) {}
       if(!ok) {

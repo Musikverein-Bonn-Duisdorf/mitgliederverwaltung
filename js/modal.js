@@ -85,3 +85,24 @@ function liftPageModalsOutOfAppMain() {
     }
 }
 document.addEventListener('DOMContentLoaded', liftPageModalsOutOfAppMain);
+
+/** Toggle masked IBAN ↔ full (SEPA list + person modal). */
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest ? e.target.closest('.iban-reveal') : null;
+    if(!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var full = btn.getAttribute('data-iban-full') || '';
+    var masked = btn.getAttribute('data-iban-masked') || '';
+    var revealed = btn.getAttribute('data-revealed') === '1';
+    if(revealed) {
+        btn.textContent = masked;
+        btn.setAttribute('data-revealed', '0');
+        btn.setAttribute('aria-label', 'IBAN anzeigen');
+    }
+    else {
+        btn.textContent = full;
+        btn.setAttribute('data-revealed', '1');
+        btn.setAttribute('aria-label', 'IBAN verbergen');
+    }
+}, true);

@@ -75,7 +75,7 @@ function permissionGroupPalettes() {
         return $cache;
     }
     $cache = array(
-        'system' => permissionGroupTonePalette('#345A95'),
+        'system' => permissionGroupTonePalette('#78909C'),
     );
     if(class_exists('Permissions')) {
         foreach(Permissions::permissionGroups() as $group) {
@@ -213,8 +213,13 @@ function renderPermissionGroupColorCss($wrapStyleTag = true) {
         $fg = $tone['fg'];
 
         $css .= '.app-nav .admin-nav-perm--'.$id
+            .',.app-nav a.admin-nav-perm--'.$id
+            .',.app-nav button.admin-nav-perm--'.$id
+            .',.app-nav .w3-button.admin-nav-perm--'.$id
+            .',.app-nav .w3-bar-item.admin-nav-perm--'.$id
             .',.profile-perm-tile--'.$id
-            .'{background:'.$soft.' !important;border-color:'.$accent.';color:'.$fg.' !important;}';
+            .'{background:'.$soft.' !important;background-color:'.$soft.' !important;'
+            .'border-color:'.$accent.';border-left-color:'.$accent.';color:'.$fg.' !important;}';
 
         $css .= '.admin-list-shell:has(.admin-list-hero--'.$id.')'
             .'{--page-title-accent:'.$accent.';}';

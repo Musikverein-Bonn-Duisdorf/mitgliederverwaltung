@@ -47,10 +47,25 @@ if($isPost) {
         exit;
     }
     // Accept form field snapshot from the same POST (save + upload in one step).
-    if(isset($_POST['DesiredEntryDate']) || isset($_POST['DesiredType']) || isset($_POST['PaymentMethod'])) {
+    if(isset($_POST['DesiredEntryDate']) || isset($_POST['DesiredType']) || isset($_POST['PaymentMethod'])
+        || isset($_POST['Vorname']) || isset($_POST['Nachname'])) {
         MembershipForm::applyPostFields($app, $_POST);
+        $profile = new MemberProfile();
+        $user = new IdentityUser();
+        if($user->load_by_id((int)$app->User)) {
+            MembershipForm::syncPersonFromPost($user, $profile, $app, $_POST);
+        }
     }
-    $name = MembershipForm::storeUpload($appId, $_FILES['scan']);
+    $vorname = isset($_POST['Vorname']) ? trim((string)$_POST['Vorname']) : '';
+    $nachname = isset($_POST['Nachname']) ? trim((string)$_POST['Nachname']) : '';
+    if($vorname === '' || $nachname === '') {
+        $u = new IdentityUser();
+        if($u->load_by_id((int)$app->User)) {
+            $vorname = MembershipForm::identityNameForInput($u->Vorname, MembershipForm::STUB_VORNAME);
+            $nachname = MembershipForm::identityNameForInput($u->Nachname, MembershipForm::STUB_NACHNAME);
+        }
+    }
+    $name = MembershipForm::storeUpload($appId, $_FILES['scan'], (int)$app->User, $vorname, $nachname);
     if($name === false) {
         http_response_code(400);
         echo 'Datei konnte nicht gespeichert werden.';
@@ -61,10 +76,16 @@ if($isPost) {
         $app->Status = 'ready';
     }
     $app->save();
+    Document::createFromMembershipScan($app);
 
-    if($alreadyApplied) {
-        $_SESSION['membershipFormFlash'] = 'Scan ersetzt.';
-        header('Location: membership-form.php?id='.$appId);
+    $userId = (int)$app->User;
+    $alreadyMember = MembershipPeriod::userIsMemberOn($userId, date('Y-m-d'));
+
+    if($alreadyApplied || $alreadyMember) {
+        $_SESSION['personFlash'] = $alreadyApplied
+            ? 'Scan ersetzt und im Dokumentenverzeichnis abgelegt.'
+            : 'Beitritts-PDF archiviert (Mitgliedschaft unverändert).';
+        header('Location: person.php?id='.$userId);
         exit;
     }
 
@@ -80,7 +101,7 @@ if($isPost) {
             : '';
         $_SESSION['personFlash'] = 'Scan gespeichert — Beitritt angewendet (Eintritt '.germanDate($entry)
             .', '.(string)$app->DesiredType.').'.$sepaNote;
-        header('Location: person.php?id='.(int)$app->User);
+        header('Location: person.php?id='.$userId);
         exit;
     }
     $_SESSION['membershipFormFlash'] = 'Scan gespeichert, Beitritt konnte nicht automatisch angewendet werden — bitte prüfen und anwenden.';

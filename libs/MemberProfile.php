@@ -9,7 +9,6 @@ class MemberProfile
         'User' => null,
         'Birthday' => null,
         'Phone' => null,
-        'Phone2' => null,
         'Street' => null,
         'Zip' => null,
         'City' => null,
@@ -108,7 +107,6 @@ class MemberProfile
         $parts[] = 'Profil-ID: '.(int)$this->Index;
         logAppendFilled($parts, 'Geburtstag', $this->Birthday, $this->Birthday ? logEsc(germanDate($this->Birthday)) : null);
         logAppendFilled($parts, 'Telefon', $this->Phone);
-        logAppendFilled($parts, 'Telefon2', $this->Phone2);
         logAppendFilled($parts, 'Straße', $this->Street);
         logAppendFilled($parts, 'PLZ', $this->Zip);
         logAppendFilled($parts, 'Ort', $this->City);
@@ -126,7 +124,6 @@ class MemberProfile
         $fields = array(
             'Birthday' => 'Geburtstag',
             'Phone' => 'Telefon',
-            'Phone2' => 'Telefon2',
             'Street' => 'Straße',
             'Zip' => 'PLZ',
             'City' => 'Ort',
@@ -179,12 +176,11 @@ class MemberProfile
 
     private function insert() {
         $sql = sprintf(
-            'INSERT INTO `%s` (`User`, `Birthday`, `Phone`, `Phone2`, `Street`, `Zip`, `City`, `Country`, `AccountHolder`) VALUES (%d, %s, %s, %s, %s, %s, %s, %s, %s);',
+            'INSERT INTO `%s` (`User`, `Birthday`, `Phone`, `Street`, `Zip`, `City`, `Country`, `AccountHolder`) VALUES (%d, %s, %s, %s, %s, %s, %s, %s);',
             self::tableName(),
             (int)$this->User,
             mkNULLstr($this->Birthday),
             mkNULLstr($this->Phone),
-            mkNULLstr($this->Phone2),
             mkNULLstr($this->Street),
             mkNULLstr($this->Zip),
             mkNULLstr($this->City),
@@ -207,11 +203,10 @@ class MemberProfile
 
     private function update() {
         $sql = sprintf(
-            'UPDATE `%s` SET `Birthday` = %s, `Phone` = %s, `Phone2` = %s, `Street` = %s, `Zip` = %s, `City` = %s, `Country` = %s, `AccountHolder` = %s WHERE `Index` = %d;',
+            'UPDATE `%s` SET `Birthday` = %s, `Phone` = %s, `Street` = %s, `Zip` = %s, `City` = %s, `Country` = %s, `AccountHolder` = %s WHERE `Index` = %d;',
             self::tableName(),
             mkNULLstr($this->Birthday),
             mkNULLstr($this->Phone),
-            mkNULLstr($this->Phone2),
             mkNULLstr($this->Street),
             mkNULLstr($this->Zip),
             mkNULLstr($this->City),

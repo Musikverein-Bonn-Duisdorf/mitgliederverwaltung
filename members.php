@@ -56,39 +56,72 @@ adminListSearchField('Name, Email, Typ…', array('onkeyup' => 'filterListRows()
     $isMember = !empty($row['isMember']);
     $type = isset($row['type']) ? $row['type'] : null;
     $retentionDue = isset($row['retentionDue']) ? $row['retentionDue'] : null;
+    $retentionDueToday = ($retentionDue !== null && $retentionDue <= date('Y-m-d'));
     if($isMember && $type === 'foerdernd') {
-        $typeLabel = 'fördernd';
+        $typeLabel = 'Fördernd';
+        $chipMod = 'namedGroup';
+        $chipText = 'Fördernd';
+        $rowMod = 'user-row--foerdernd';
     }
     elseif($isMember && $type === 'aktiv') {
-        $typeLabel = 'aktiv';
+        $typeLabel = 'Aktiv';
+        $chipMod = 'member';
+        $chipText = 'Aktiv';
+        $rowMod = 'user-row--member';
     }
     elseif($isMember) {
         $typeLabel = 'Mitglied';
+        $chipMod = 'member';
+        $chipText = 'Mitglied';
+        $rowMod = 'user-row--member';
     }
-    elseif($retentionDue !== null && $retentionDue <= date('Y-m-d')) {
+    elseif($retentionDueToday) {
         $typeLabel = 'Löschung fällig';
+        $chipMod = 'nomember';
+        $chipText = 'Löschung fällig';
+        $rowMod = 'user-row--retention';
     }
     else {
-        $typeLabel = '—';
+        $typeLabel = 'kein Mitglied';
+        $chipMod = 'nomember';
+        $chipText = 'kein Mitglied';
+        $rowMod = 'user-row--nomember';
     }
     $search = $name.' '.$email.' '.$typeLabel.' '.$u->Index.' '.(string)$u->login;
     ?>
-  <a class="list-row w3-padding w3-border-bottom w3-block"
-     href="person.php?id=<?php echo (int)$u->Index; ?>"
-     data-search="<?php echo h($search); ?>"
-     data-sort-name="<?php echo h($name); ?>"
-     data-sort-email="<?php echo h($email); ?>"
-     data-sort-type="<?php echo h($typeLabel); ?>">
-    <div class="w3-row">
-      <div class="w3-col l4 m5 s12"><?php echo h($name); ?> <span class="w3-small w3-text-grey">#<?php echo (int)$u->Index; ?></span></div>
-      <div class="w3-col l4 m4 s12 w3-small"><?php echo h($email !== '' ? $email : '—'); ?></div>
-      <div class="w3-col l4 m3 s12"><?php echo h($typeLabel); ?><?php
-        if(!$isMember && $retentionDue) {
-            echo ' <span class="w3-small w3-text-grey">'.h(germanDate($retentionDue)).'</span>';
-        }
-      ?></div>
+  <div class="user-row list-row <?php echo h($rowMod); ?>"
+       role="button" tabindex="0"
+       onclick="openModal('user', <?php echo (int)$u->Index; ?>)"
+       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openModal('user', <?php echo (int)$u->Index; ?>);}"
+       data-search="<?php echo h($search); ?>"
+       data-sort-name="<?php echo h($name); ?>"
+       data-sort-email="<?php echo h($email); ?>"
+       data-sort-type="<?php echo h($typeLabel); ?>">
+    <div class="user-id">
+      <div class="user-id-num"><span class="user-id-k">User-ID</span> <?php echo (int)$u->Index; ?></div>
+      <div class="user-id-chips" aria-label="Mitgliedschaft">
+        <div class="user-id-chip-line mail-recipient-chips">
+          <span class="mail-recipient-chip mail-recipient-chip--<?php echo h($chipMod); ?>"><?php echo h($chipText); ?></span>
+        </div>
+      </div>
     </div>
-  </a>
+    <div class="user-rail" aria-hidden="true"></div>
+    <div class="user-main">
+      <div class="user-name"><?php echo h($name); ?></div>
+<?php if($email !== '') { ?>
+      <div class="user-email"><a href="mailto:<?php echo h($email); ?>" onclick="event.stopPropagation()"><?php echo h($email); ?></a></div>
+<?php } ?>
+      <div class="user-meta-line">
+        <span class="user-meta-item"><span class="user-meta-k">Mitgliedschaft</span> <?php echo h($typeLabel); ?></span>
+<?php if(!$isMember && $retentionDue) { ?>
+        <span class="user-meta-item"><span class="user-meta-k">Löschung</span> <?php echo h(germanDate($retentionDue)); ?></span>
+<?php } ?>
+<?php if((string)$u->login !== '') { ?>
+        <span class="user-meta-item"><span class="user-meta-k">Login</span> <?php echo h((string)$u->login); ?></span>
+<?php } ?>
+      </div>
+    </div>
+  </div>
 <?php } ?>
 <?php if(!$n) { ?>
   <div class="w3-panel w3-padding">Keine Personen für diesen Filter.</div>

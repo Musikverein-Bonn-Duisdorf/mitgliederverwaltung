@@ -2,3 +2,5 @@ common/config.php
 vendor/
 uploads/membership/*
 !uploads/membership/.gitignore
+uploads/persons/*
+!uploads/persons/.gitignore

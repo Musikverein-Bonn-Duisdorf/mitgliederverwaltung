@@ -223,7 +223,8 @@ a.app-titlebar-logo {
   box-sizing: border-box;
   padding: 0.65rem 0.9rem;
   border: 0;
-  background: transparent;
+  /* Kein background:transparent — sonst überschreibt custom.css TitleBar-/Gruppenfarben
+     (Melde-Parität). Gruppenfarben setzen background !important. */
   color: inherit;
   text-align: left;
   text-decoration: none;
@@ -311,6 +312,11 @@ a.app-titlebar-logo {
   border: 0;
   text-align: left;
   font: inherit;
+}
+
+/* Gruppenfarben: linke Akzentleiste nicht durch border:0 am Cat-Toggle killen */
+.app-nav-cat .admin-nav-group > .w3-button.app-nav-cat-toggle.admin-nav-perm {
+  border-left: 4px solid transparent;
 }
 
 .app-nav-cat .admin-nav-group > .w3-button.app-nav-cat-toggle .nav-label {
@@ -1275,7 +1281,9 @@ a.app-titlebar-logo {
   color: #222 !important;
 }
 
-.app-nav .admin-nav-perm {
+.app-nav .admin-nav-perm,
+.app-nav .admin-nav-group > .w3-button.admin-nav-perm,
+.app-nav .w3-bar-item.admin-nav-perm {
   border-left: 4px solid transparent;
 }
 
@@ -4264,11 +4272,18 @@ body.meld-cal-print {
   grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
 }
 
-.person-inline-delete {
-  display: inline-block;
-  margin-left: 0.5rem;
-  vertical-align: middle;
+.person-doc-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
 }
+
+.person-doc-type {
+  font-weight: 600;
+  min-width: 6.5rem;
+}
+
 
 .person-app-row {
   display: flex;
@@ -5954,3 +5969,227 @@ select.profile-control {
   }
 }
 
+
+/* MELD-155 parity: person list rows (Melde user-row) */
+.user-row.list-filtered-out {
+  display: none !important;
+}
+
+.user-row {
+  --user-id-col-w: 11.5rem;
+  --user-rail-w: 0.35rem;
+  --user-rail-color: var(--page-title-accent, #345A95);
+  --user-row-pad-y: 0.85rem;
+  --user-rail-inset: 0.4rem;
+  display: grid;
+  grid-template-columns: var(--user-id-col-w) var(--user-rail-w) minmax(0, 1fr);
+  column-gap: 0.85rem;
+  align-items: start;
+  box-sizing: border-box;
+  padding: var(--user-row-pad-y) 1rem;
+  margin: 0 0 0.55rem;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 0.35rem;
+  cursor: pointer;
+  overflow: hidden;
+  background: transparent;
+}
+
+.user-row:focus-visible {
+  outline: 2px solid rgba(0, 0, 0, 0.45);
+  outline-offset: 2px;
+}
+
+.user-row--member {
+  --user-rail-color: var(--page-title-accent, #345A95);
+}
+
+.user-row--foerdernd {
+  --user-rail-color: #7b1fa2;
+}
+
+.user-row--nomember {
+  --user-rail-color: #b0892e;
+}
+
+.user-row--retention {
+  --user-rail-color: #c62828;
+}
+
+.user-id {
+  width: var(--user-id-col-w);
+  max-width: var(--user-id-col-w);
+  min-width: 0;
+  box-sizing: border-box;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+.user-id-num {
+  font-weight: 700;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.user-id-k {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.65;
+  margin-bottom: 0.1rem;
+}
+
+.user-id-chips {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  margin: 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.user-id-chip-line {
+  margin: 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.user-rail {
+  width: var(--user-rail-w);
+  align-self: stretch;
+  margin-top: calc(-1 * var(--user-row-pad-y) + var(--user-rail-inset));
+  margin-bottom: calc(-1 * var(--user-row-pad-y) + var(--user-rail-inset));
+  min-height: calc(100% + 2 * var(--user-row-pad-y) - 2 * var(--user-rail-inset));
+  background: var(--user-rail-color);
+  border-radius: 2px;
+}
+
+.user-main {
+  min-width: 0;
+  align-self: start;
+}
+
+.user-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.user-email {
+  margin-top: 0.15rem;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.user-email a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.user-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.user-meta-item {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.user-meta-k {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.65;
+  margin-right: 0.25rem;
+}
+
+@media (max-width: 900px) {
+  .user-row {
+    --user-id-col-w: 8.5rem;
+    --user-row-pad-y: 0.75rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+/* Click-to-reveal IBAN (masked by default) */
+.iban-reveal {
+  appearance: none;
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.95em;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.iban-reveal:hover,
+.iban-reveal:focus-visible {
+  outline: none;
+}
+
+.iban-reveal[data-revealed="1"] {
+  font-weight: 600;
+}
+
+.iban-check-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  min-height: 1.15em;
+}
+
+.iban-check-hint--valid {
+  color: #2e7d32;
+}
+
+.iban-check-hint--invalid {
+  color: #c62828;
+}
+
+input.js-iban-check.iban-check--valid {
+  border-color: #2e7d32 !important;
+}
+
+input.js-iban-check.iban-check--invalid {
+  border-color: #c62828 !important;
+}
+
+.person-modal-sepa {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.person-modal-sepa-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.65rem;
+}
+
+.person-modal-sepa-ref {
+  font-weight: 600;
+}

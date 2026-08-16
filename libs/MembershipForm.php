@@ -5,6 +5,21 @@
  */
 class MembershipForm
 {
+    const STUB_VORNAME = '(neu)';
+    const STUB_NACHNAME = '(Person)';
+
+    /** True if Melde name is the create-to-form stub. */
+    public static function isStubIdentityName($vorname, $nachname) {
+        return trim((string)$vorname) === self::STUB_VORNAME
+            && trim((string)$nachname) === self::STUB_NACHNAME;
+    }
+
+    /** Strip stub placeholder for form inputs (empty = user should fill). */
+    public static function identityNameForInput($value, $stubConstant) {
+        $v = trim((string)$value);
+        return ($v === $stubConstant) ? '' : $v;
+    }
+
     public static function storageDir($applicationId) {
         return dirname(__DIR__).'/uploads/membership/'.(int)$applicationId;
     }
@@ -37,11 +52,38 @@ class MembershipForm
         return $full;
     }
 
+    /** Basename without extension: MVD-Beitritt-{userId}-{Name} */
+    public static function fileBasename($userId, $vorname = '', $nachname = '') {
+        $userId = (int)$userId;
+        $name = self::sanitizeFileNamePart(trim((string)$vorname.' '.(string)$nachname));
+        if($name === '') {
+            $name = 'ohne-Namen';
+        }
+        return 'MVD-Beitritt-'.$userId.'-'.$name;
+    }
+
+    public static function sanitizeFileNamePart($raw) {
+        $s = trim((string)$raw);
+        if($s === '') {
+            return '';
+        }
+        $s = strtr($s, array(
+            'ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue',
+            'Ä' => 'Ae', 'Ö' => 'Oe', 'Ü' => 'Ue', 'ß' => 'ss',
+        ));
+        $s = preg_replace('/[^A-Za-z0-9._-]+/', '-', $s);
+        $s = preg_replace('/-+/', '-', (string)$s);
+        return trim((string)$s, '-._');
+    }
+
     /**
      * @param array $file $_FILES entry
+     * @param int $userId Melde user id for filename
+     * @param string $vorname
+     * @param string $nachname
      * @return string|false basename
      */
-    public static function storeUpload($applicationId, array $file) {
+    public static function storeUpload($applicationId, array $file, $userId = 0, $vorname = '', $nachname = '') {
         $applicationId = (int)$applicationId;
         if($applicationId < 1) {
             return false;
@@ -62,8 +104,13 @@ class MembershipForm
         if(!is_dir($dir) && !mkdir($dir, 0750, true)) {
             return false;
         }
-        $name = 'beitritt-'.date('Ymd-His').'.'.$ext;
+        $stem = self::fileBasename($userId > 0 ? $userId : $applicationId, $vorname, $nachname);
+        $name = $stem.'.'.$ext;
         $target = $dir.DIRECTORY_SEPARATOR.$name;
+        if(is_file($target)) {
+            $name = $stem.'-'.date('Ymd-His').'.'.$ext;
+            $target = $dir.DIRECTORY_SEPARATOR.$name;
+        }
         if(!move_uploaded_file($file['tmp_name'], $target)) {
             return false;
         }
@@ -122,13 +169,22 @@ class MembershipForm
         );
     }
 
-    /** Mindestbeitrag in Cent für Typ aktiv|foerdernd. */
+    /** Mindestbeitrag in Cent für Typ aktiv|foerdernd (Config in €). */
     public static function minFeeCents($type) {
         $type = strtolower(trim((string)$type));
-        if($type === 'foerdernd') {
-            return max(0, (int)self::cfg('BeitragMindestFoerderndCents', '2000'));
+        $euroKey = ($type === 'foerdernd') ? 'BeitragMindestFoerdernd' : 'BeitragMindestAktiv';
+        $centKey = ($type === 'foerdernd') ? 'BeitragMindestFoerderndCents' : 'BeitragMindestAktivCents';
+        if(isset($GLOBALS['optionsDB'][$euroKey]) && trim((string)$GLOBALS['optionsDB'][$euroKey]) !== '') {
+            $parsed = self::parseEuroToCents($GLOBALS['optionsDB'][$euroKey]);
+            if($parsed !== null) {
+                return max(0, $parsed);
+            }
         }
-        return max(0, (int)self::cfg('BeitragMindestAktivCents', '2000'));
+        if(isset($GLOBALS['optionsDB'][$centKey]) && trim((string)$GLOBALS['optionsDB'][$centKey]) !== '') {
+            return max(0, (int)$GLOBALS['optionsDB'][$centKey]);
+        }
+        $parsed = self::parseEuroToCents('20,00');
+        return $parsed !== null ? max(0, $parsed) : 2000;
     }
 
     /** @return array{aktiv:int,foerdernd:int} */
@@ -186,82 +242,117 @@ class MembershipForm
         return '<strong class="loan-form-em">'.htmlspecialchars((string)$text, ENT_QUOTES, 'UTF-8').'</strong>';
     }
 
-    /** Austritt / Mitgliedschaftsregeln. @return list<string> */
-    public static function membershipRulesParagraphsHtml() {
-        return array(
-            'Mit dem Beitritt erkenne ich die Satzung und die Beschlüsse der Mitgliederversammlung an.'
-            .' Die Mitgliedschaft beginnt mit dem angegebenen Eintrittsdatum.',
-            'Kündigung nur <strong class="loan-form-em">schriftlich</strong> zum'
-            .' <strong class="loan-form-em">Kalenderjahresende</strong> (Zugang beim Vorstand).'
-            .' Vereinsinventar ist beim Austritt unverzüglich zurückzugeben.',
-        );
+    /** @return array<string,string> */
+    public static function formTextDefaults() {
+        if(!function_exists('getMembershipFormTextDefaults')) {
+            require_once dirname(__DIR__).'/config/MembershipFormTextDefaults.php';
+        }
+        return getMembershipFormTextDefaults();
+    }
+
+    public static function formText($key) {
+        $defaults = self::formTextDefaults();
+        $def = isset($defaults[$key]) ? $defaults[$key] : '';
+        return self::cfg($key, $def);
     }
 
     /**
-     * Einwilligung Bild/Ton/Video — nur für aktive Mitgliedschaft (öffentliche Auftritte).
-     * @return list<string> HTML paragraphs
+     * Escape template, apply **bold**, inject HTML placeholders ({org}, {fee}, …).
+     * @param array<string,string> $htmlVars placeholder => trusted HTML
+     */
+    public static function formatFormTemplate($template, array $htmlVars = array()) {
+        $out = htmlspecialchars((string)$template, ENT_QUOTES, 'UTF-8');
+        $out = preg_replace('/\*\*(.+?)\*\*/s', '<strong class="loan-form-em">$1</strong>', $out);
+        foreach($htmlVars as $key => $html) {
+            $out = str_replace('{'.htmlspecialchars((string)$key, ENT_QUOTES, 'UTF-8').'}', $html, $out);
+            $out = str_replace('{'.$key.'}', $html, $out);
+        }
+        return $out;
+    }
+
+    /**
+     * @param array<string,string> $htmlVars
+     * @return list<string>
+     */
+    public static function formTextParagraphsHtml($key, array $htmlVars = array()) {
+        $raw = str_replace("\r\n", "\n", self::formText($key));
+        $parts = preg_split("/\n\s*\n/", $raw);
+        $out = array();
+        foreach($parts as $part) {
+            $part = trim(preg_replace('/\s+/u', ' ', str_replace("\n", ' ', (string)$part)));
+            if($part === '') {
+                continue;
+            }
+            $out[] = self::formatFormTemplate($part, $htmlVars);
+        }
+        if(!$out) {
+            $out[] = self::formatFormTemplate(self::formText($key), $htmlVars);
+        }
+        return $out;
+    }
+
+    public static function privacyLinkHtml() {
+        $url = htmlspecialchars(self::privacyUrl(), ENT_QUOTES, 'UTF-8');
+        return '<a href="'.$url.'">'.$url.'</a>';
+    }
+
+    public static function leadSentenceHtml($nameHtml) {
+        return self::formatFormTemplate(self::formText('membershipFormLead'), array(
+            'name' => $nameHtml,
+            'org' => self::em(self::orgName()),
+        ));
+    }
+
+    /** @return list<string> */
+    public static function membershipRulesParagraphsHtml() {
+        return self::formTextParagraphsHtml('membershipFormRules');
+    }
+
+    /**
+     * @return list<string>
      */
     public static function mediaConsentParagraphsHtml() {
-        $org = self::em(self::orgName());
-        $url = htmlspecialchars(self::privacyUrl(), ENT_QUOTES, 'UTF-8');
-        return array(
-            'Als <strong class="loan-form-em">aktives Mitglied</strong> willige ich ein, dass '.$org
-            .' bei öffentlichen Auftritten und vergleichbaren Veranstaltungen Bild-, Ton- und Videoaufnahmen'
-            .' anfertigen und zur Vereinsdarstellung veröffentlichen darf'
-            .' (Website, soziale Medien, Programmhefte, Presse).'
-            .' Widerruf mit Wirkung für die Zukunft möglich; Details: <a href="'.$url.'">'.$url.'</a>.',
-        );
+        return self::formTextParagraphsHtml('membershipFormMediaConsent', array(
+            'org' => self::em(self::orgName()),
+            'privacyUrl' => self::privacyLinkHtml(),
+        ));
     }
 
     /**
-     * Datenschutzhinweis (Information nach Art. 13 DSGVO; Mitgliedschaft = Vertrag, keine reine Einwilligung).
-     * @return list<string> HTML paragraphs (escaped content, em allowed)
+     * @return list<string>
      */
     public static function privacyParagraphsHtml() {
-        $org = self::em(self::orgName());
-        $url = htmlspecialchars(self::privacyUrl(), ENT_QUOTES, 'UTF-8');
-        return array(
-            $org.' verarbeitet die Angaben zur Begründung und Durchführung der Mitgliedschaft'
-            .' (Art. 6 Abs. 1 lit. b DSGVO). Weitergabe nur bei gesetzlicher Pflicht oder zur Vertragserfüllung'
-            .' (z.&nbsp;B. Bank bei Lastschrift). Speicherung für die Mitgliedschaftsdauer und danach'
-            .' nach Aufbewahrungspflichten. Rechte: Auskunft, Berichtigung, Löschung, Einschränkung,'
-            .' Widerspruch, Beschwerde bei einer Aufsichtsbehörde. Details: <a href="'.$url.'">'.$url.'</a>.',
-        );
+        return self::formTextParagraphsHtml('membershipFormPrivacy', array(
+            'org' => self::em(self::orgName()),
+            'privacyUrl' => self::privacyLinkHtml(),
+        ));
     }
 
     /**
-     * Einleitung und SEPA-Mandatstext (Core-Lastschrift).
-     * @param int|null $individualCents gewählter Jahresbeitrag
-     * @param string $type aktiv|foerdernd
-     * @return array{intro:list<string>,mandate:list<string>,note:string} HTML fragments
+     * @param int|null $individualCents
+     * @param string $type
+     * @return array{intro:list<string>,mandate:list<string>,note:string}
      */
     public static function sepaTextsHtml($individualCents = null, $type = 'aktiv') {
-        $org = self::em(self::orgName());
         $type = ($type === 'foerdernd') ? 'foerdernd' : 'aktiv';
         $fee = self::clampFeeCents(
             $individualCents !== null ? (int)$individualCents : self::minFeeCents($type),
             $type
         );
-        $feeFmt = htmlspecialchars(self::formatEuroFromCents($fee), ENT_QUOTES, 'UTF-8');
-
+        $feeHtml = '<strong class="loan-form-em">'.htmlspecialchars(self::formatEuroFromCents($fee), ENT_QUOTES, 'UTF-8').'</strong>';
+        $vars = array(
+            'org' => self::em(self::orgName()),
+            'fee' => $feeHtml,
+        );
+        $noteParas = self::formTextParagraphsHtml('membershipFormSepaNote', $vars);
         return array(
-            'intro' => array(
-                'Ich zahle den Jahresbeitrag von <strong class="loan-form-em">'.$feeFmt.'</strong>'
-                .' per SEPA-Lastschrift (erstmals für das Beitrittsjahr, danach jährlich).'
-                .' Vorabankündigung in der Regel mindestens 14 Tage vor dem Einzug.',
-            ),
-            'mandate' => array(
-                'Ich ermächtige '.$org.', Zahlungen von meinem Konto per Lastschrift einzuziehen,'
-                .' und weise mein Kreditinstitut an, die Lastschriften einzulösen.'
-                .' Erstattung binnen acht Wochen ab Belastung nach den Bedingungen meines Kreditinstituts möglich.'
-                .' Widerruf des Mandats jederzeit mit Wirkung für die Zukunft.',
-            ),
-            'note' => 'Bei fehlender Deckung bestehen keine Einlösungspflicht und ggf. Rücklastschriftkosten zu meinen Lasten.',
+            'intro' => self::formTextParagraphsHtml('membershipFormSepaIntro', $vars),
+            'mandate' => self::formTextParagraphsHtml('membershipFormSepaMandate', $vars),
+            'note' => isset($noteParas[0]) ? $noteParas[0] : '',
         );
     }
 
     /**
-     * Kurztext für Beitragszahlung per Überweisung (Vereinskonto).
      * @param int|null $individualCents
      * @param string $type
      * @return list<string>
@@ -272,12 +363,11 @@ class MembershipForm
             $individualCents !== null ? (int)$individualCents : self::minFeeCents($type),
             $type
         );
-        $feeFmt = htmlspecialchars(self::formatEuroFromCents($fee), ENT_QUOTES, 'UTF-8');
-        return array(
-            'Ich zahle den Jahresbeitrag von <strong class="loan-form-em">'.$feeFmt.'</strong>'
-            .' selbst per Überweisung auf das Vereinskonto (erstmals für das Beitrittsjahr, danach jährlich'
-            .' nach Aufforderung bzw. Fälligkeit).',
-        );
+        $feeHtml = '<strong class="loan-form-em">'.htmlspecialchars(self::formatEuroFromCents($fee), ENT_QUOTES, 'UTF-8').'</strong>';
+        return self::formTextParagraphsHtml('membershipFormTransfer', array(
+            'org' => self::em(self::orgName()),
+            'fee' => $feeHtml,
+        ));
     }
 
     /** @return bool */
@@ -293,7 +383,7 @@ class MembershipForm
         if($app->Birthday === null || $app->Birthday === '') {
             $app->Birthday = $profile->Birthday;
         }
-        foreach(array('Phone', 'Phone2', 'Street', 'Zip', 'City', 'Country', 'AccountHolder') as $k) {
+        foreach(array('Phone', 'Street', 'Zip', 'City', 'Country', 'AccountHolder') as $k) {
             if($app->$k === null || $app->$k === '') {
                 $app->$k = $profile->$k;
             }
@@ -308,7 +398,12 @@ class MembershipForm
             $app->PaymentMethod = 'sepa';
         }
         if($app->AccountHolder === null || $app->AccountHolder === '') {
-            $app->AccountHolder = $user->getName();
+            if(!self::isStubIdentityName($user->Vorname, $user->Nachname)) {
+                $name = trim((string)$user->getName());
+                if($name !== '') {
+                    $app->AccountHolder = $name;
+                }
+            }
         }
 
         $mem = new Membership();
@@ -349,24 +444,66 @@ class MembershipForm
         $app->AnnualFeeCents = self::clampFeeCents($parsed, $app->DesiredType);
         $app->Birthday = isset($post['Birthday']) ? trim((string)$post['Birthday']) : null;
         $app->Phone = isset($post['Phone']) ? trim((string)$post['Phone']) : null;
-        $app->Phone2 = isset($post['Phone2']) ? trim((string)$post['Phone2']) : null;
         $app->Street = isset($post['Street']) ? trim((string)$post['Street']) : null;
         $app->Zip = isset($post['Zip']) ? trim((string)$post['Zip']) : null;
         $app->City = isset($post['City']) ? trim((string)$post['City']) : null;
         $app->Country = isset($post['Country']) ? trim((string)$post['Country']) : 'DE';
         $app->AccountHolder = isset($post['AccountHolder']) ? trim((string)$post['AccountHolder']) : null;
-        $app->BankName = isset($post['BankName']) ? trim((string)$post['BankName']) : null;
-        $app->Iban = isset($post['Iban']) ? trim((string)$post['Iban']) : null;
-        $app->Bic = isset($post['Bic']) ? trim((string)$post['Bic']) : null;
+        $bankName = isset($post['BankName']) ? trim((string)$post['BankName']) : '';
+        $ibanRaw = isset($post['Iban']) ? trim((string)$post['Iban']) : '';
+        $app->Iban = $ibanRaw !== '' ? formatIbanDisplay($ibanRaw) : null;
+        if($bankName === '' && $app->Iban !== null && class_exists('BlzDirectory')) {
+            $bankName = BlzDirectory::bankNameFromIban($app->Iban);
+        }
+        $app->BankName = $bankName !== '' ? $bankName : null;
         $app->Note = isset($post['Note']) ? trim((string)$post['Note']) : null;
         if($app->PaymentMethod !== 'sepa') {
             $app->BankName = null;
             $app->Iban = null;
-            $app->Bic = null;
         }
         if($app->Status !== 'applied') {
             $app->Status = 'draft';
         }
+    }
+
+    /**
+     * Persist Melde Stammdaten + MIT profile from form POST / application snapshot.
+     * @return string empty on success, else flash error
+     */
+    public static function syncPersonFromPost(IdentityUser $user, MemberProfile $profile, MembershipApplication $app, array $post) {
+        $vorname = isset($post['Vorname']) ? trim((string)$post['Vorname']) : '';
+        $nachname = isset($post['Nachname']) ? trim((string)$post['Nachname']) : '';
+        if($vorname === '' || $nachname === ''
+            || self::isStubIdentityName($vorname, $nachname)
+            || $vorname === self::STUB_VORNAME
+            || $nachname === self::STUB_NACHNAME) {
+            return 'Vor- und Nachname sind Pflicht (keine Platzhalter).';
+        }
+        $user->Vorname = $vorname;
+        $user->Nachname = $nachname;
+        $user->Email = isset($post['Email']) ? trim((string)$post['Email']) : '';
+        if(!$user->saveStammdaten()) {
+            return 'Name/E-Mail konnten nicht gespeichert werden.';
+        }
+
+        $profile->load_or_create((int)$user->Index);
+        $profile->Birthday = $app->Birthday;
+        $profile->Phone = $app->Phone;
+        $profile->Street = $app->Street;
+        $profile->Zip = $app->Zip;
+        $profile->City = $app->City;
+        $profile->Country = $app->Country;
+        $holder = trim((string)$app->AccountHolder);
+        if($holder === '') {
+            $holder = trim($vorname.' '.$nachname);
+        }
+        $profile->AccountHolder = $holder !== '' ? $holder : null;
+        $profile->save();
+
+        if($app->AccountHolder === null || trim((string)$app->AccountHolder) === '') {
+            $app->AccountHolder = $profile->AccountHolder;
+        }
+        return '';
     }
 }
 ?>

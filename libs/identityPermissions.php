@@ -19,7 +19,6 @@ class IdentityPermissions
         // Melde-side keys still used in MIT (login + legacy ops). In-app user rights live in mit_Permissions.
         return array(
             'perm_accessMitgliederverwaltung',
-            'perm_showLog',
             'perm_editConfig',
         );
     }

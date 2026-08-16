@@ -59,6 +59,18 @@ $action = isset($_POST['action']) ? (string)$_POST['action'] : '';
 if(($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if($action === 'saveFields') {
         MembershipForm::applyPostFields($app, $_POST);
+        $ibanCheck = normalizeIban((string)$app->Iban);
+        if($app->PaymentMethod === 'sepa' && $ibanCheck !== '' && !isValidIban($ibanCheck)) {
+            $_SESSION['membershipFormFlash'] = 'IBAN ungültig.';
+            header('Location: membership-form.php?id='.(int)$app->Index);
+            exit;
+        }
+        $syncErr = MembershipForm::syncPersonFromPost($user, $profile, $app, $_POST);
+        if($syncErr !== '') {
+            $_SESSION['membershipFormFlash'] = $syncErr;
+            header('Location: membership-form.php?id='.(int)$app->Index);
+            exit;
+        }
         $app->save();
         header('Location: membership-form.php?id='.(int)$app->Index);
         exit;
@@ -136,10 +148,10 @@ $feeEuroInput = number_format($feeCents / 100, 2, '.', '');
 $sepaTexts = MembershipForm::sepaTextsHtml($feeCents, $app->DesiredType);
 $transferTexts = MembershipForm::transferTextsHtml($feeCents, $app->DesiredType);
 $mediaConsentParas = MembershipForm::mediaConsentParagraphsHtml();
-$mandateRefPreview = 'MVD-SEPA-'.(int)$app->Index;
-$email2 = trim((string)$user->Email2);
+$vornameInput = MembershipForm::identityNameForInput($user->Vorname, MembershipForm::STUB_VORNAME);
+$nachnameInput = MembershipForm::identityNameForInput($user->Nachname, MembershipForm::STUB_NACHNAME);
+$emailInput = trim((string)$user->Email);
 $phoneFilled = MembershipForm::isFilled($app->Phone);
-$phone2Filled = MembershipForm::isFilled($app->Phone2);
 $birthdayFilled = MembershipForm::isFilled($app->Birthday);
 $countryShow = MembershipForm::isFilled($app->Country) && strtoupper(trim((string)$app->Country)) !== 'DE';
 $addrPrint = trim(implode(', ', array_filter(array(
@@ -147,6 +159,12 @@ $addrPrint = trim(implode(', ', array_filter(array(
     trim((string)$app->Zip.' '.(string)$app->City),
     $countryShow ? (string)$app->Country : '',
 ))));
+$typeLabelLong = $typeFoerdernd ? 'förderndes Mitglied' : 'aktives Mitglied';
+$printFileBase = MembershipForm::fileBasename($userId, $vornameInput, $nachnameInput);
+$isExistingMember = MembershipPeriod::userIsMemberOn($userId, date('Y-m-d'));
+$uploadConfirm = ($statusApplied || $isExistingMember)
+    ? "'Scan speichern / ersetzen? Die Mitgliedschaft bleibt unverändert.'"
+    : "'Scan hochladen und Beitritt mit dem Eintrittsdatum auf dem Formular anwenden?'";
 
 header('Content-Type: text/html; charset=utf-8');
 ?><!DOCTYPE html>
@@ -154,8 +172,8 @@ header('Content-Type: text/html; charset=utf-8');
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Beitrittserklärung – <?php echo $h($orgName); ?></title>
-  <link rel="stylesheet" href="<?php echo $h($cssUrl); ?>">
+  <title><?php echo $h($printFileBase); ?></title>
+  <link rel="stylesheet" href="<?php echo $cssUrl; ?>">
 </head>
 <body class="loan-form-print">
   <div class="loan-form-toolbar no-print">
@@ -193,7 +211,7 @@ header('Content-Type: text/html; charset=utf-8');
               class="loan-form-btn loan-form-btn--primary"
               name="action"
               value="upload"
-              onclick="var i=document.querySelector('input[name=scan][form=membership-form-fields]'); if(!i||!i.files||!i.files.length){alert('Bitte zuerst eine Datei wählen.'); return false;} return confirm(<?php echo $statusApplied ? "'Scan ersetzen?'" : "'Scan hochladen und Beitritt mit dem Eintrittsdatum auf dem Formular anwenden?'"; ?>);">Hochladen</button>
+              onclick="var i=document.querySelector('input[name=scan][form=membership-form-fields]'); if(!i||!i.files||!i.files.length){alert('Bitte zuerst eine Datei wählen.'); return false;} return confirm(<?php echo $uploadConfirm; ?>);">Hochladen</button>
     </div>
   </div>
 
@@ -220,69 +238,37 @@ header('Content-Type: text/html; charset=utf-8');
     </header>
 
     <section class="loan-form-section loan-form-panel">
-      <h2>Beitritt</h2>
-      <p class="membership-legal">Hiermit erkläre ich meinen Beitritt zum <?php echo MembershipForm::em($orgName); ?> als</p>
-      <div class="loan-form-field-row membership-type-row no-print">
-        <label class="loan-form-check"><input type="radio" name="DesiredType" value="aktiv"<?php echo $typeAktiv ? ' checked' : ''; ?><?php echo $applied ? ' disabled' : ''; ?>> aktives Mitglied</label>
-        <label class="loan-form-check"><input type="radio" name="DesiredType" value="foerdernd"<?php echo $typeFoerdernd ? ' checked' : ''; ?><?php echo $applied ? ' disabled' : ''; ?>> förderndes Mitglied</label>
-      </div>
-      <p class="loan-form-print-only membership-legal"><strong class="loan-form-em"><?php echo $typeFoerdernd ? 'förderndes Mitglied' : 'aktives Mitglied'; ?></strong></p>
-<?php foreach($membershipRules as $para) { ?>
-      <p class="membership-legal membership-legal--tight"><?php echo $para; ?></p>
-<?php } ?>
-      <div class="loan-form-field-row" style="margin-top:0.35rem;">
-        <span class="loan-form-field-label">Jahresbeitrag</span>
-<?php if(!$applied) { ?>
-        <input id="membership-annual-fee"
-               class="loan-form-input loan-form-input--short no-print"
-               type="number"
-               name="AnnualFeeEuro"
-               step="0.01"
-               min="<?php echo $h(number_format($minFees[$typeAktiv ? 'aktiv' : 'foerdernd'] / 100, 2, '.', '')); ?>"
-               value="<?php echo $h($feeEuroInput); ?>"
-               data-min-aktiv="<?php echo (int)$minFees['aktiv']; ?>"
-               data-min-foerdernd="<?php echo (int)$minFees['foerdernd']; ?>"
-               required>
-        <span class="loan-form-muted no-print">€ / Jahr</span>
-<?php } ?>
-        <span class="loan-form-field-value<?php echo $applied ? '' : ' loan-form-print-only'; ?>"><strong class="loan-form-em"><?php echo $h(MembershipForm::formatEuroFromCents($feeCents)); ?></strong> / Jahr</span>
-      </div>
-      <p class="membership-legal membership-legal--note no-print">
-        Mindest: aktiv <?php echo $h(MembershipForm::formatEuroFromCents($minFees['aktiv'])); ?>,
-        fördernd <?php echo $h(MembershipForm::formatEuroFromCents($minFees['foerdernd'])); ?>.
-      </p>
-      <div class="loan-form-field-row membership-type-row no-print" style="margin-top:0.35rem;">
-        <span class="loan-form-field-label">Zahlung</span>
-        <label class="loan-form-check"><input type="radio" name="PaymentMethod" value="sepa"<?php echo $paySepa ? ' checked' : ''; ?><?php echo $applied ? ' disabled' : ''; ?>> SEPA-Lastschrift</label>
-        <label class="loan-form-check"><input type="radio" name="PaymentMethod" value="ueberweisung"<?php echo !$paySepa ? ' checked' : ''; ?><?php echo $applied ? ' disabled' : ''; ?>> Überweisung</label>
-      </div>
-      <p class="loan-form-print-only membership-legal">Zahlung: <strong class="loan-form-em"><?php echo $paySepa ? 'SEPA-Lastschrift' : 'Überweisung'; ?></strong></p>
-      <div class="loan-form-field-row" style="margin-top:0.35rem;">
-        <span class="loan-form-field-label">Eintritt</span>
-<?php if(!$applied) { ?>
-        <input class="loan-form-input loan-form-input--short no-print" type="date" name="DesiredEntryDate" value="<?php echo $h((string)($app->DesiredEntryDate ?: date('Y-m-d'))); ?>" required>
-<?php } ?>
-        <span class="<?php echo $applied ? 'loan-form-field-value' : 'loan-form-print-only'; ?>"><?php echo $h(germanDate($app->DesiredEntryDate ?: date('Y-m-d'))); ?></span>
-      </div>
-    </section>
-
-    <section id="membership-media-consent" class="loan-form-section loan-form-panel"<?php echo $typeAktiv ? '' : ' hidden'; ?>>
-      <h2>Medien</h2>
-<?php foreach($mediaConsentParas as $para) { ?>
-      <p class="membership-legal"><?php echo $para; ?></p>
-<?php } ?>
-    </section>
-
-    <section class="loan-form-section loan-form-panel">
-      <h2>Person</h2>
+      <h2>Anschrift</h2>
       <dl class="loan-form-dl loan-form-dl--2col">
-        <div><dt>Name</dt><dd><?php echo $h($user->getName()); ?></dd></div>
-<?php if(MembershipForm::isFilled($user->Email)) { ?>
-        <div><dt>E-Mail</dt><dd><?php echo $h((string)$user->Email); ?></dd></div>
+        <div>
+          <dt>Vorname</dt>
+          <dd>
+<?php if(!$applied) { ?>
+            <input class="loan-form-input no-print" type="text" name="Vorname" id="membership-Vorname" value="<?php echo $h($vornameInput); ?>" required autocomplete="given-name">
+            <span class="loan-form-print-only"><?php echo $h($vornameInput !== '' ? $vornameInput : '—'); ?></span>
+<?php } else { echo $h($vornameInput !== '' ? $vornameInput : '—'); } ?>
+          </dd>
+        </div>
+        <div>
+          <dt>Nachname</dt>
+          <dd>
+<?php if(!$applied) { ?>
+            <input class="loan-form-input no-print" type="text" name="Nachname" id="membership-Nachname" value="<?php echo $h($nachnameInput); ?>" required autocomplete="family-name">
+            <span class="loan-form-print-only"><?php echo $h($nachnameInput !== '' ? $nachnameInput : '—'); ?></span>
+<?php } else { echo $h($nachnameInput !== '' ? $nachnameInput : '—'); } ?>
+          </dd>
+        </div>
+        <div class="<?php echo $emailInput !== '' || !$applied ? '' : 'membership-opt--empty'; ?>">
+          <dt>E-Mail</dt>
+          <dd>
+<?php if(!$applied) { ?>
+            <input class="loan-form-input no-print" type="email" name="Email" value="<?php echo $h($emailInput); ?>" autocomplete="email">
+<?php if($emailInput !== '') { ?>
+            <span class="loan-form-print-only"><?php echo $h($emailInput); ?></span>
 <?php } ?>
-<?php if($email2 !== '') { ?>
-        <div><dt>E-Mail 2</dt><dd><?php echo $h($email2); ?></dd></div>
-<?php } ?>
+<?php } else { echo $h($emailInput); } ?>
+          </dd>
+        </div>
 <?php if($birthdayFilled || !$applied) { ?>
         <div class="<?php echo $birthdayFilled ? '' : 'membership-opt--empty'; ?>">
           <dt>Geburtsdatum</dt>
@@ -311,19 +297,6 @@ header('Content-Type: text/html; charset=utf-8');
           </dd>
         </div>
 <?php } ?>
-<?php if($phone2Filled || !$applied) { ?>
-        <div class="<?php echo $phone2Filled ? '' : 'membership-opt--empty'; ?>">
-          <dt>Handy</dt>
-          <dd>
-<?php if(!$applied) { ?>
-            <input class="loan-form-input no-print" type="text" name="Phone2" value="<?php echo $h((string)$app->Phone2); ?>">
-<?php if($phone2Filled) { ?>
-            <span class="loan-form-print-only"><?php echo $h((string)$app->Phone2); ?></span>
-<?php } ?>
-<?php } else { echo $h((string)$app->Phone2); } ?>
-          </dd>
-        </div>
-<?php } ?>
       </dl>
       <div class="loan-form-field-row loan-form-field-row--stack">
         <span class="loan-form-field-label">Straße</span>
@@ -348,14 +321,135 @@ header('Content-Type: text/html; charset=utf-8');
     </section>
 
     <section class="loan-form-section loan-form-panel">
+      <h2>Bankverbindung</h2>
+      <div class="loan-form-field-row membership-type-row no-print" style="margin-bottom:0.35rem;">
+        <span class="loan-form-field-label">Zahlung</span>
+        <label class="loan-form-check"><input type="radio" name="PaymentMethod" value="sepa"<?php echo $paySepa ? ' checked' : ''; ?><?php echo $applied ? ' disabled' : ''; ?>> SEPA-Lastschrift</label>
+        <label class="loan-form-check"><input type="radio" name="PaymentMethod" value="ueberweisung"<?php echo !$paySepa ? ' checked' : ''; ?><?php echo $applied ? ' disabled' : ''; ?>> Überweisung</label>
+      </div>
+      <p class="loan-form-print-only membership-legal">Zahlung per <strong id="membership-pay-label" class="loan-form-em"><?php echo $paySepa ? 'SEPA-Lastschrift' : 'Überweisung'; ?></strong>.</p>
+
+      <div id="membership-pay-sepa"<?php echo $paySepa ? '' : ' hidden'; ?>>
+        <dl class="loan-form-dl loan-form-dl--2col">
+          <div>
+            <dt>Kontoinhaber</dt>
+            <dd>
+<?php if(!$applied) { ?>
+              <input class="loan-form-input no-print" type="text" name="AccountHolder" id="membership-AccountHolder" value="<?php echo $h((string)$app->AccountHolder); ?>" autocomplete="name">
+              <span class="loan-form-print-only" id="membership-AccountHolder-print"><?php echo $h((string)$app->AccountHolder); ?></span>
+<?php } else { echo $h((string)$app->AccountHolder); } ?>
+            </dd>
+          </div>
+          <div>
+            <dt>IBAN</dt>
+            <dd>
+<?php if(!$applied) { ?>
+              <input class="loan-form-input no-print js-iban-check" type="text" name="Iban" id="membership-Iban" value="<?php echo $h((string)$app->Iban); ?>" autocomplete="off" spellcheck="false" inputmode="text" data-iban-bank="membership-BankName">
+              <span class="loan-form-print-only"><?php echo $h((string)$app->Iban); ?></span>
+<?php } else { echo $h(formatIbanDisplay((string)$app->Iban)); } ?>
+            </dd>
+          </div>
+          <div class="<?php echo MembershipForm::isFilled($app->BankName) || !$applied ? '' : 'membership-opt--empty'; ?>">
+            <dt>Kreditinstitut</dt>
+            <dd>
+<?php if(!$applied) { ?>
+              <input class="loan-form-input no-print js-iban-bank" type="text" name="BankName" id="membership-BankName" value="<?php echo $h((string)$app->BankName); ?>" autocomplete="organization">
+<?php if(MembershipForm::isFilled($app->BankName)) { ?>
+              <span class="loan-form-print-only"><?php echo $h((string)$app->BankName); ?></span>
+<?php } ?>
+<?php } else { echo $h((string)$app->BankName); } ?>
+            </dd>
+          </div>
+        </dl>
+<?php if($creditor['creditorId'] !== '') { ?>
+        <p class="membership-legal membership-legal--tight" style="margin-top:0.4rem;">Gläubiger-ID des Vereins: <strong class="loan-form-em"><?php echo $h($creditor['creditorId']); ?></strong></p>
+<?php } ?>
+      </div>
+
+      <div id="membership-pay-transfer"<?php echo $paySepa ? ' hidden' : ''; ?>>
+        <dl class="loan-form-dl loan-form-dl--2col membership-creditor">
+          <div><dt>Empfänger</dt><dd><?php echo $h($orgName); ?></dd></div>
+          <div><dt>Kreditinstitut</dt><dd><?php echo $h($creditor['bank']); ?></dd></div>
+          <div><dt>IBAN</dt><dd><?php echo $h($creditor['iban']); ?></dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="loan-form-section loan-form-panel">
+      <h2>Beitritt</h2>
+      <p class="membership-legal membership-legal--lead">
+        <?php
+        $declareName = trim($vornameInput.' '.$nachnameInput);
+        $nameHtml = '<strong class="loan-form-em" id="membership-declare-name">'
+            .$h($declareName !== '' ? $declareName : '—')
+            .'</strong>';
+        echo MembershipForm::leadSentenceHtml($nameHtml);
+        ?>
+        <span class="loan-form-print-only"><strong class="loan-form-em"><?php echo $h($typeLabelLong); ?></strong></span><span class="no-print">:</span>
+      </p>
+      <div class="loan-form-field-row membership-type-row no-print">
+        <label class="loan-form-check"><input type="radio" name="DesiredType" value="aktiv"<?php echo $typeAktiv ? ' checked' : ''; ?><?php echo $applied ? ' disabled' : ''; ?>> aktives Mitglied</label>
+        <label class="loan-form-check"><input type="radio" name="DesiredType" value="foerdernd"<?php echo $typeFoerdernd ? ' checked' : ''; ?><?php echo $applied ? ' disabled' : ''; ?>> förderndes Mitglied</label>
+      </div>
+<?php foreach($membershipRules as $para) { ?>
+      <p class="membership-legal"><?php echo $para; ?></p>
+<?php } ?>
+      <p class="membership-legal">
+        Der Jahresbeitrag beträgt
+        <span class="loan-form-field-value<?php echo $applied ? '' : ' loan-form-print-only'; ?>"><strong class="loan-form-em"><?php echo $h(MembershipForm::formatEuroFromCents($feeCents)); ?></strong></span><?php if(!$applied) { ?>
+        <input id="membership-annual-fee"
+               class="loan-form-input loan-form-input--short no-print"
+               type="number"
+               name="AnnualFeeEuro"
+               step="0.01"
+               min="<?php echo $h(number_format($minFees[$typeAktiv ? 'aktiv' : 'foerdernd'] / 100, 2, '.', '')); ?>"
+               value="<?php echo $h($feeEuroInput); ?>"
+               data-min-aktiv="<?php echo (int)$minFees['aktiv']; ?>"
+               data-min-foerdernd="<?php echo (int)$minFees['foerdernd']; ?>"
+               required>
+        <span class="loan-form-muted no-print">€</span><?php } ?>
+        pro Jahr. Eintritt zum
+<?php if(!$applied) { ?>
+        <input class="loan-form-input loan-form-input--short no-print" type="date" name="DesiredEntryDate" value="<?php echo $h((string)($app->DesiredEntryDate ?: date('Y-m-d'))); ?>" required>
+<?php } ?>
+        <span class="<?php echo $applied ? '' : 'loan-form-print-only'; ?>"><strong class="loan-form-em"><?php echo $h(germanDate($app->DesiredEntryDate ?: date('Y-m-d'))); ?></strong></span>.
+      </p>
+      <p class="membership-legal membership-legal--note no-print">
+        Mindestbeitrag: aktiv <?php echo $h(MembershipForm::formatEuroFromCents($minFees['aktiv'])); ?>,
+        fördernd <?php echo $h(MembershipForm::formatEuroFromCents($minFees['foerdernd'])); ?>.
+      </p>
+      <div id="membership-legal-pay-sepa"<?php echo $paySepa ? '' : ' hidden'; ?>>
+<?php foreach($sepaTexts['intro'] as $para) { ?>
+        <p class="membership-legal"><?php echo $para; ?></p>
+<?php } ?>
+<?php foreach($sepaTexts['mandate'] as $para) { ?>
+        <p class="membership-legal"><?php echo $para; ?></p>
+<?php } ?>
+        <p class="membership-legal membership-legal--note"><?php echo $sepaTexts['note']; ?></p>
+      </div>
+      <div id="membership-legal-pay-transfer"<?php echo $paySepa ? ' hidden' : ''; ?>>
+<?php foreach($transferTexts as $para) { ?>
+        <p class="membership-legal"><?php echo $para; ?></p>
+<?php } ?>
+      </div>
+    </section>
+
+    <section class="loan-form-section loan-form-panel">
       <h2>Datenschutz</h2>
 <?php foreach($privacyParas as $para) { ?>
       <p class="membership-legal"><?php echo $para; ?></p>
 <?php } ?>
     </section>
 
+    <section id="membership-media-consent" class="loan-form-section loan-form-panel"<?php echo $typeAktiv ? '' : ' hidden'; ?>>
+      <h2>Medien</h2>
+<?php foreach($mediaConsentParas as $para) { ?>
+      <p class="membership-legal"><?php echo $para; ?></p>
+<?php } ?>
+    </section>
+
     <section class="loan-form-section loan-form-panel loan-form-signatures">
-      <h2>Unterschrift Beitritt</h2>
+      <h2>Unterschriften</h2>
       <div class="loan-form-sign-grid">
         <div class="loan-form-sign">
           <div class="loan-form-sign-space loan-form-sign-space--date"></div>
@@ -363,69 +457,10 @@ header('Content-Type: text/html; charset=utf-8');
         </div>
         <div class="loan-form-sign">
           <div class="loan-form-sign-space loan-form-sign-space--sig"></div>
-          <p class="loan-form-sign-caption">Unterschrift</p>
+          <p class="loan-form-sign-caption">Unterschrift Mitglied</p>
         </div>
       </div>
-    </section>
-
-    <section id="membership-pay-sepa" class="loan-form-section loan-form-panel"<?php echo $paySepa ? '' : ' hidden'; ?>>
-      <h2>SEPA-Lastschriftmandat</h2>
-<?php if($creditor['creditorId'] !== '') { ?>
-      <p class="membership-legal membership-legal--tight">Gläubiger-ID: <strong class="loan-form-em"><?php echo $h($creditor['creditorId']); ?></strong>
-        · Mandatsreferenz: <?php echo $h($mandateRefPreview); ?> <span class="loan-form-muted">(vorläufig)</span></p>
-<?php } else { ?>
-      <p class="membership-legal membership-legal--tight">Mandatsreferenz: <?php echo $h($mandateRefPreview); ?> <span class="loan-form-muted">(vorläufig)</span></p>
-<?php } ?>
-<?php foreach($sepaTexts['intro'] as $para) { ?>
-      <p class="membership-legal"><?php echo $para; ?></p>
-<?php } ?>
-<?php foreach($sepaTexts['mandate'] as $para) { ?>
-      <p class="membership-legal"><?php echo $para; ?></p>
-<?php } ?>
-      <dl class="loan-form-dl loan-form-dl--2col" style="margin-top:0.4rem;">
-        <div>
-          <dt>Kontoinhaber</dt>
-          <dd>
-<?php if(!$applied) { ?>
-            <input class="loan-form-input no-print" type="text" name="AccountHolder" value="<?php echo $h((string)$app->AccountHolder); ?>">
-            <span class="loan-form-print-only"><?php echo $h((string)$app->AccountHolder); ?></span>
-<?php } else { echo $h((string)$app->AccountHolder); } ?>
-          </dd>
-        </div>
-        <div class="<?php echo MembershipForm::isFilled($app->BankName) || !$applied ? '' : 'membership-opt--empty'; ?>">
-          <dt>Kreditinstitut</dt>
-          <dd>
-<?php if(!$applied) { ?>
-            <input class="loan-form-input no-print" type="text" name="BankName" value="<?php echo $h((string)$app->BankName); ?>">
-<?php if(MembershipForm::isFilled($app->BankName)) { ?>
-            <span class="loan-form-print-only"><?php echo $h((string)$app->BankName); ?></span>
-<?php } ?>
-<?php } else { echo $h((string)$app->BankName); } ?>
-          </dd>
-        </div>
-        <div>
-          <dt>IBAN</dt>
-          <dd>
-<?php if(!$applied) { ?>
-            <input class="loan-form-input no-print" type="text" name="Iban" value="<?php echo $h((string)$app->Iban); ?>" autocomplete="off" spellcheck="false">
-            <span class="loan-form-print-only"><?php echo $h((string)$app->Iban); ?></span>
-<?php } else { echo $h(maskIban((string)$app->Iban)); } ?>
-          </dd>
-        </div>
-        <div class="<?php echo MembershipForm::isFilled($app->Bic) || !$applied ? '' : 'membership-opt--empty'; ?>">
-          <dt>BIC</dt>
-          <dd>
-<?php if(!$applied) { ?>
-            <input class="loan-form-input no-print" type="text" name="Bic" value="<?php echo $h((string)$app->Bic); ?>" spellcheck="false">
-<?php if(MembershipForm::isFilled($app->Bic)) { ?>
-            <span class="loan-form-print-only"><?php echo $h((string)$app->Bic); ?></span>
-<?php } ?>
-<?php } else { echo $h((string)$app->Bic); } ?>
-          </dd>
-        </div>
-      </dl>
-      <p class="membership-legal membership-legal--note"><?php echo $sepaTexts['note']; ?></p>
-      <div class="loan-form-sign-grid" style="margin-top:0.55rem;">
+      <div id="membership-sign-sepa" class="loan-form-sign-grid" style="margin-top:0.75rem;"<?php echo $paySepa ? '' : ' hidden'; ?>>
         <div class="loan-form-sign">
           <div class="loan-form-sign-space loan-form-sign-space--date"></div>
           <p class="loan-form-sign-caption">Ort, Datum</p>
@@ -435,19 +470,6 @@ header('Content-Type: text/html; charset=utf-8');
           <p class="loan-form-sign-caption">Unterschrift Kontoinhaber</p>
         </div>
       </div>
-    </section>
-
-    <section id="membership-pay-transfer" class="loan-form-section loan-form-panel"<?php echo $paySepa ? ' hidden' : ''; ?>>
-      <h2>Zahlung per Überweisung</h2>
-<?php foreach($transferTexts as $para) { ?>
-      <p class="membership-legal"><?php echo $para; ?></p>
-<?php } ?>
-      <dl class="loan-form-dl loan-form-dl--2col membership-creditor">
-        <div><dt>Empfänger</dt><dd><?php echo $h($orgName); ?></dd></div>
-        <div><dt>Kreditinstitut</dt><dd><?php echo $h($creditor['bank']); ?></dd></div>
-        <div><dt>IBAN</dt><dd><?php echo $h($creditor['iban']); ?></dd></div>
-        <div><dt>BIC</dt><dd><?php echo $h($creditor['bic']); ?></dd></div>
-      </dl>
     </section>
   </article>
 
@@ -472,11 +494,70 @@ header('Content-Type: text/html; charset=utf-8');
     var fee = document.getElementById('membership-annual-fee');
     var sepa = document.getElementById('membership-pay-sepa');
     var transfer = document.getElementById('membership-pay-transfer');
+    var legalSepa = document.getElementById('membership-legal-pay-sepa');
+    var legalTransfer = document.getElementById('membership-legal-pay-transfer');
+    var signSepa = document.getElementById('membership-sign-sepa');
+    var payLabel = document.getElementById('membership-pay-label');
+    var vorname = document.getElementById('membership-Vorname');
+    var nachname = document.getElementById('membership-Nachname');
+    var holder = document.getElementById('membership-AccountHolder');
+    var holderPrint = document.getElementById('membership-AccountHolder-print');
+    var declareName = document.getElementById('membership-declare-name');
+    var autoHolder = null;
+    var printUserId = <?php echo (int)$userId; ?>;
+    function sanitizeFilePart(raw) {
+      var s = String(raw || '').trim();
+      if (!s) return '';
+      s = s.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue')
+           .replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue').replace(/ß/g, 'ss');
+      s = s.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/-+/g, '-');
+      return s.replace(/^[-._]+|[-._]+$/g, '');
+    }
+    function syncDeclareName() {
+      if (!declareName) return;
+      var name = memberName();
+      declareName.textContent = name !== '' ? name : '—';
+    }
+    function syncPrintTitle() {
+      var name = sanitizeFilePart(memberName()) || 'ohne-Namen';
+      document.title = 'MVD-Beitritt-' + printUserId + '-' + name;
+    }
+    function memberName() {
+      var v = vorname ? vorname.value.trim() : '';
+      var n = nachname ? nachname.value.trim() : '';
+      return (v + ' ' + n).trim();
+    }
+    function syncHolderFromName() {
+      if (!holder || autoHolder === null) return;
+      var name = memberName();
+      var cur = holder.value.trim();
+      if (cur === '' || cur === autoHolder) {
+        holder.value = name;
+        autoHolder = name;
+        if (holderPrint) holderPrint.textContent = name;
+      }
+    }
+    function initHolderAuto() {
+      if (!holder) return;
+      var name = memberName();
+      var cur = holder.value.trim();
+      if (cur === '' || cur === name) {
+        autoHolder = name;
+        if (cur === '' && name !== '') {
+          holder.value = name;
+          if (holderPrint) holderPrint.textContent = name;
+        }
+      } else {
+        autoHolder = null;
+      }
+    }
     function selectedType() {
       var aktiv = document.querySelector('input[name="DesiredType"][value="aktiv"]');
       return (aktiv && aktiv.checked) ? 'aktiv' : 'foerdernd';
     }
     function selectedPay() {
+      var u = document.querySelector('input[name="PaymentMethod"][value="ueberweisung"]');
+      if (u && u.checked) return 'ueberweisung';
       var s = document.querySelector('input[name="PaymentMethod"][value="sepa"]');
       return (s && s.checked) ? 'sepa' : 'ueberweisung';
     }
@@ -485,12 +566,21 @@ header('Content-Type: text/html; charset=utf-8');
       var raw = fee.getAttribute(type === 'foerdernd' ? 'data-min-foerdernd' : 'data-min-aktiv');
       return parseInt(raw || '2000', 10) || 2000;
     }
+    function setPayBlock(el, on) {
+      if (!el) return;
+      el.hidden = !on;
+    }
     function sync() {
       var type = selectedType();
       var pay = selectedPay();
+      var isSepa = pay === 'sepa';
       if (cons) cons.hidden = type !== 'aktiv';
-      if (sepa) sepa.hidden = pay !== 'sepa';
-      if (transfer) transfer.hidden = pay !== 'ueberweisung';
+      setPayBlock(sepa, isSepa);
+      setPayBlock(transfer, !isSepa);
+      setPayBlock(legalSepa, isSepa);
+      setPayBlock(legalTransfer, !isSepa);
+      setPayBlock(signSepa, isSepa);
+      if (payLabel) payLabel.textContent = isSepa ? 'SEPA-Lastschrift' : 'Überweisung';
       if (!fee) return;
       var minC = minCentsFor(type);
       var minEuro = (minC / 100).toFixed(2);
@@ -503,6 +593,32 @@ header('Content-Type: text/html; charset=utf-8');
     document.querySelectorAll('input[name="DesiredType"], input[name="PaymentMethod"]').forEach(function (el) {
       el.addEventListener('change', sync);
     });
+    if (vorname) {
+      vorname.addEventListener('input', function () {
+        syncHolderFromName();
+        syncDeclareName();
+        syncPrintTitle();
+      });
+    }
+    if (nachname) {
+      nachname.addEventListener('input', function () {
+        syncHolderFromName();
+        syncDeclareName();
+        syncPrintTitle();
+      });
+    }
+    if (holder) {
+      holder.addEventListener('input', function () {
+        var cur = holder.value.trim();
+        if (cur === '') {
+          autoHolder = '';
+          syncHolderFromName();
+        } else {
+          autoHolder = null;
+        }
+        if (holderPrint) holderPrint.textContent = holder.value;
+      });
+    }
     if (fee) {
       fee.addEventListener('change', function () {
         var minC = minCentsFor(selectedType());
@@ -513,7 +629,11 @@ header('Content-Type: text/html; charset=utf-8');
       });
     }
     sync();
+    initHolderAuto();
+    syncDeclareName();
+    syncPrintTitle();
   })();
   </script>
+  <script src="<?php echo assetUrl('js/ibanCheck.js'); ?>" data-blz-lookup="blzLookup.php"></script>
 </body>
 </html>

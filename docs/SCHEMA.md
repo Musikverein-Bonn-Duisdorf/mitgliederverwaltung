@@ -21,7 +21,7 @@ Prefix: `mit_`. Identity: `meldeliste_User` (Login/Name/Email). Vollständige St
 
 Schema-Version: siehe `config/schema_version_number.php` (aktuell **7**: Perioden + individueller Beitrag).
 
-Mindestbeiträge: Config `BeitragMindestAktivCents` / `BeitragMindestFoerderndCents` (Standard je 2000 = 20,00 €). Individueller Beitrag darf den Mindestsatz des gewählten Typs nicht unterschreiten.
+Mindestbeiträge: Config `BeitragMindestAktiv` / `BeitragMindestFoerdernd` (Euro, z. B. `20,00`). Individueller Beitrag darf den Mindestsatz des gewählten Typs nicht unterschreiten.
 Migration:
 
 1. Schema create/repair (neue Tabellen)

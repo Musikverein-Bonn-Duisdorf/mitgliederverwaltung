@@ -12,16 +12,26 @@ requirePermission('perm_editUsers');
 
 $action = isset($_POST['action']) ? (string)$_POST['action'] : 'save_profile';
 
-if($action === 'create_user') {
+if($action === 'create_user' || $action === 'create_user_to_form') {
     if(!csrf_verify(isset($_POST['csrf_token']) ? (string)$_POST['csrf_token'] : '')) {
         $_SESSION['personFlash'] = 'Ungültige Sitzung — bitte erneut versuchen.';
         header('Location: new-person.php');
         exit;
     }
+    $toForm = ($action === 'create_user_to_form');
     $vorname = isset($_POST['vorname']) ? trim((string)$_POST['vorname']) : '';
     $nachname = isset($_POST['nachname']) ? trim((string)$_POST['nachname']) : '';
     $login = isset($_POST['login']) ? trim((string)$_POST['login']) : '';
-    if($vorname === '' || $nachname === '') {
+    if($toForm) {
+        if($vorname === '') {
+            $vorname = MembershipForm::STUB_VORNAME;
+        }
+        if($nachname === '') {
+            $nachname = MembershipForm::STUB_NACHNAME;
+        }
+        $login = ''; // Login nur über Personenseite
+    }
+    elseif($vorname === '' || $nachname === '') {
         $_SESSION['personFlash'] = 'Vor- und Nachname sind Pflicht.';
         header('Location: new-person.php');
         exit;
@@ -49,26 +59,31 @@ if($action === 'create_user') {
     $userId = (int)$created->Index;
 
     $hasProfile = false;
-    foreach(array('birthday', 'phone', 'phone2', 'street', 'zip', 'city', 'country', 'account_holder') as $k) {
+    foreach(array('birthday', 'phone', 'street', 'zip', 'city', 'country', 'account_holder') as $k) {
         if(isset($_POST[$k]) && trim((string)$_POST[$k]) !== '') {
             $hasProfile = true;
             break;
         }
     }
-    if($hasProfile) {
+    if($hasProfile || $toForm) {
         $profile = new MemberProfile();
-        $profile->User = $userId;
-        $profile->Birthday = isset($_POST['birthday']) ? trim((string)$_POST['birthday']) : null;
-        $profile->Phone = isset($_POST['phone']) ? trim((string)$_POST['phone']) : null;
-        $profile->Phone2 = isset($_POST['phone2']) ? trim((string)$_POST['phone2']) : null;
-        $profile->Street = isset($_POST['street']) ? trim((string)$_POST['street']) : null;
-        $profile->Zip = isset($_POST['zip']) ? trim((string)$_POST['zip']) : null;
-        $profile->City = isset($_POST['city']) ? trim((string)$_POST['city']) : null;
-        $profile->Country = isset($_POST['country']) ? trim((string)$_POST['country']) : null;
-        $profile->AccountHolder = isset($_POST['account_holder']) ? trim((string)$_POST['account_holder']) : null;
-        $profile->save();
+        $profile->load_or_create($userId);
+        if($hasProfile) {
+            $profile->Birthday = isset($_POST['birthday']) ? trim((string)$_POST['birthday']) : null;
+            $profile->Phone = isset($_POST['phone']) ? trim((string)$_POST['phone']) : null;
+            $profile->Street = isset($_POST['street']) ? trim((string)$_POST['street']) : null;
+            $profile->Zip = isset($_POST['zip']) ? trim((string)$_POST['zip']) : null;
+            $profile->City = isset($_POST['city']) ? trim((string)$_POST['city']) : null;
+            $profile->Country = isset($_POST['country']) ? trim((string)$_POST['country']) : null;
+            $profile->AccountHolder = isset($_POST['account_holder']) ? trim((string)$_POST['account_holder']) : null;
+            $profile->save();
+        }
     }
 
+    if($toForm) {
+        header('Location: membership-form.php?user='.$userId);
+        exit;
+    }
     $_SESSION['personFlash'] = 'Person angelegt.';
     header('Location: person.php?id='.$userId);
     exit;
@@ -102,7 +117,6 @@ if($action === 'save_profile') {
     $profile->load_or_create($userId);
     $profile->Birthday = isset($_POST['birthday']) ? trim((string)$_POST['birthday']) : null;
     $profile->Phone = isset($_POST['phone']) ? trim((string)$_POST['phone']) : null;
-    $profile->Phone2 = isset($_POST['phone2']) ? trim((string)$_POST['phone2']) : null;
     $profile->Street = isset($_POST['street']) ? trim((string)$_POST['street']) : null;
     $profile->Zip = isset($_POST['zip']) ? trim((string)$_POST['zip']) : null;
     $profile->City = isset($_POST['city']) ? trim((string)$_POST['city']) : null;
@@ -320,25 +334,29 @@ elseif($action === 'sepa_create' || $action === 'sepa_update') {
         $m->User = $userId;
     }
     $iban = isset($_POST['iban']) ? preg_replace('/\s+/', '', strtoupper(trim((string)$_POST['iban']))) : '';
-    $ref = isset($_POST['mandate_ref']) ? trim((string)$_POST['mandate_ref']) : '';
+    $bankName = isset($_POST['bank_name']) ? trim((string)$_POST['bank_name']) : '';
     $from = isset($_POST['valid_from']) ? trim((string)$_POST['valid_from']) : '';
     $to = isset($_POST['valid_to']) ? trim((string)$_POST['valid_to']) : '';
-    $bic = isset($_POST['bic']) ? trim((string)$_POST['bic']) : '';
     $active = isset($_POST['active']) ? 1 : 0;
-    if($ref === '' || $from === '') {
-        $_SESSION['personFlash'] = 'Mandatsreferenz und Gültig-ab sind Pflicht.';
+    if($from === '') {
+        $_SESSION['personFlash'] = 'Gültig-ab ist Pflicht.';
     }
     elseif($iban === '' && ($action === 'sepa_create' || trim((string)$m->IbanEnc) === '')) {
         $_SESSION['personFlash'] = 'IBAN fehlt.';
+    }
+    elseif($iban !== '' && !isValidIban($iban)) {
+        $_SESSION['personFlash'] = 'IBAN ungültig.';
     }
     else {
         if($iban !== '') {
             $m->IbanEnc = $iban;
         }
-        $m->MandateRef = $ref;
+        if($bankName === '' && class_exists('BlzDirectory')) {
+            $bankName = BlzDirectory::bankNameFromIban((string)$m->IbanEnc);
+        }
+        $m->BankName = $bankName !== '' ? $bankName : null;
         $m->ValidFrom = $from;
         $m->ValidTo = ($to === '') ? null : $to;
-        $m->Bic = $bic;
         $m->Active = $active;
         if($m->save()) {
             $_SESSION['personFlash'] = $action === 'sepa_create' ? 'SEPA-Mandat angelegt.' : 'SEPA-Mandat gespeichert.';
@@ -356,6 +374,30 @@ elseif($action === 'sepa_delete') {
     }
     elseif($m->delete()) {
         $_SESSION['personFlash'] = 'SEPA-Mandat gelöscht.';
+    }
+    else {
+        $_SESSION['personFlash'] = 'Löschen fehlgeschlagen.';
+    }
+}
+elseif($action === 'document_upload') {
+    if(!isset($_FILES['document']) || !is_array($_FILES['document'])) {
+        $_SESSION['personFlash'] = 'Keine Datei gewählt.';
+    }
+    else {
+        $docType = isset($_POST['doc_type']) ? (string)$_POST['doc_type'] : Document::TYPE_SONSTIGES;
+        $note = isset($_POST['doc_note']) ? trim((string)$_POST['doc_note']) : '';
+        $doc = Document::createFromUpload($userId, $docType, $_FILES['document'], $note !== '' ? $note : null);
+        $_SESSION['personFlash'] = $doc ? 'Dokument gespeichert.' : 'Dokument konnte nicht gespeichert werden (PDF/JPG/PNG).';
+    }
+}
+elseif($action === 'document_delete') {
+    $docId = isset($_POST['document_id']) ? (int)$_POST['document_id'] : 0;
+    $doc = new Document();
+    if($docId < 1 || !$doc->load_by_id($docId) || (int)$doc->User !== $userId) {
+        $_SESSION['personFlash'] = 'Dokument nicht gefunden.';
+    }
+    elseif($doc->delete()) {
+        $_SESSION['personFlash'] = 'Dokument gelöscht.';
     }
     else {
         $_SESSION['personFlash'] = 'Löschen fehlgeschlagen.';

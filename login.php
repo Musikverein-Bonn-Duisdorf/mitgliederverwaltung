@@ -12,7 +12,7 @@ mitConfigureSession();
       include 'common/include.php';
     ?>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="<?php echo assetUrl('styles/w3.css'); ?>">
     <link rel="stylesheet" href="<?php echo assetUrl('styles/w3-colors-highway.css'); ?>">
     <link rel="stylesheet" href="<?php echo assetUrl('styles/w3-color-mvd.css'); ?>">
@@ -23,9 +23,9 @@ mitConfigureSession();
     <link rel="icon" href="<?php echo htmlspecialchars((string)$GLOBALS['optionsDB']['favicon'], ENT_QUOTES, 'UTF-8'); ?>" type="image/x-icon">
     <title><?php echo htmlspecialchars((string)$optionsDB['WebSiteName'], ENT_QUOTES, 'UTF-8'); ?></title>
   </head>
-  <body class="<?php echo htmlspecialchars((string)$GLOBALS['optionsDB']['colorBackground'], ENT_QUOTES, 'UTF-8'); ?> app-layout">
-    <div class="app-titlebar <?php echo htmlspecialchars((string)$optionsDB['colorTitle'], ENT_QUOTES, 'UTF-8'); ?>">
-      <h1 class="app-titlebar-name"><?php echo htmlspecialchars((string)$optionsDB['WebSiteName'], ENT_QUOTES, 'UTF-8'); ?></h1>
+  <body class="<?php echo htmlspecialchars((string)$GLOBALS['optionsDB']['colorBackground'], ENT_QUOTES, 'UTF-8'); ?>">
+    <div class="w3-container <?php echo htmlspecialchars((string)$optionsDB['colorTitle'], ENT_QUOTES, 'UTF-8'); ?>">
+      <h1><?php echo htmlspecialchars((string)$optionsDB['WebSiteName'], ENT_QUOTES, 'UTF-8'); ?></h1>
     </div>
     <?php
 if(tryMeldeSsoLoginFromRequest()) {
@@ -34,12 +34,7 @@ if(tryMeldeSsoLoginFromRequest()) {
     <?php
     die("<div class=\"w3-panel ".$GLOBALS['optionsDB']['colorSuccess']."\"><h2>Login erfolgreich (SSO).</h2></div>");
 }
-enforceMitgliederverwaltungAccess();
-if(!empty($GLOBALS['loginDeniedNoAccess'])) {
-      ?>
-    <div class="w3-panel <?php echo $GLOBALS['optionsDB']['colorLogError']; ?>"><h2>Keine Berechtigung für die Mitgliederverwaltung.</h2></div>
-    <?php
-}
+// Password login before any loggedIn()/enforce path that might touch the session.
 if(isset($_POST['triggerlogin'])) {
     $r = validateUser($_POST['login'] ?? '', $_POST['password'] ?? '');
     if(!$r) {
@@ -51,7 +46,13 @@ if(isset($_POST['triggerlogin'])) {
     <?php
     }
 }
-if(loggedIn()) {
+enforceMitgliederverwaltungAccess();
+if(!empty($GLOBALS['loginDeniedNoAccess'])) {
+      ?>
+    <div class="w3-panel <?php echo $GLOBALS['optionsDB']['colorLogError']; ?>"><h2>Keine Berechtigung für die Mitgliederverwaltung.</h2></div>
+    <?php
+}
+if(isset($_SESSION['userid']) && (int)$_SESSION['userid'] > 0) {
       ?>
     <meta http-equiv="refresh" content="0; URL='index.php'" />
     <?php
@@ -60,7 +61,7 @@ if(loggedIn()) {
       ?>
     <div class="w3-panel w3-mobile w3-center w3-col s3 l4">
     </div>
-    <div class="w3-panel w3-mobile w3-center w3-border w3-col s6 l4 profile-shell">
+    <div class="w3-panel w3-mobile w3-center w3-border w3-col s6 l4">
       <div class="w3-panel <?php echo $GLOBALS['optionsDB']['colorTitleBar']; ?> w3-mobile">
 	<h2>Login</h2>
       </div>

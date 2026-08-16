@@ -105,6 +105,8 @@ class SchemaManager
     public function create() {
         $this->report = array();
         $installedBefore = $this->getInstalledSchemaVersion();
+        $this->migratePhone2IntoPhone($installedBefore, true);
+        $this->migrateBeitragMindestToEuro($installedBefore, true);
         $this->processSchema(true, false);
         $this->pruneObsoleteSchema(true);
         $this->checkConfigDefaults(true);
@@ -118,6 +120,8 @@ class SchemaManager
     public function repair() {
         $this->report = array();
         $installedBefore = $this->getInstalledSchemaVersion();
+        $this->migratePhone2IntoPhone($installedBefore, true);
+        $this->migrateBeitragMindestToEuro($installedBefore, true);
         $this->processSchema(true, true);
         $this->pruneObsoleteSchema(true);
         $this->checkConfigDefaults(true);
@@ -402,6 +406,8 @@ class SchemaManager
     public static function obsoleteConfigParameters() {
         return array(
             'jubileeBirthdayRule',
+            'BeitragMindestAktivCents',
+            'BeitragMindestFoerderndCents',
         );
     }
 
@@ -449,44 +455,218 @@ class SchemaManager
     }
 
     /**
+     * v19: BeitragMindest*Cents → BeitragMindest* (€ string).
+     * @param int $installedBefore
+     * @param bool $apply
+     */
+    private function migrateBeitragMindestToEuro($installedBefore, $apply) {
+        $installedBefore = (int)$installedBefore;
+        if($installedBefore >= 19) {
+            return;
+        }
+        $configTable = new SQLtable('config');
+        if(!$configTable->exists()) {
+            return;
+        }
+        $pairs = array(
+            'BeitragMindestAktivCents' => array(
+                'BeitragMindestAktiv',
+                'Mindest-Jahresbeitrag aktives Mitglied (€)',
+            ),
+            'BeitragMindestFoerderndCents' => array(
+                'BeitragMindestFoerdernd',
+                'Mindest-Jahresbeitrag förderndes Mitglied (€)',
+            ),
+        );
+        $prefix = $GLOBALS['dbprefix'];
+        foreach($pairs as $oldParam => $info) {
+            $newParam = $info[0];
+            $desc = $info[1];
+            $sqlNew = sprintf(
+                "SELECT `Parameter` FROM `%sconfig` WHERE `Parameter` = '%s' LIMIT 1;",
+                $prefix,
+                mysqli_real_escape_string($GLOBALS['conn'], $newParam)
+            );
+            $dbrNew = mysqli_query($GLOBALS['conn'], $sqlNew);
+            $rowNew = $dbrNew ? mysqli_fetch_assoc($dbrNew) : null;
+            if($rowNew) {
+                continue;
+            }
+            $sqlOld = sprintf(
+                "SELECT `Value` FROM `%sconfig` WHERE `Parameter` = '%s' LIMIT 1;",
+                $prefix,
+                mysqli_real_escape_string($GLOBALS['conn'], $oldParam)
+            );
+            $dbrOld = mysqli_query($GLOBALS['conn'], $sqlOld);
+            $rowOld = $dbrOld ? mysqli_fetch_assoc($dbrOld) : null;
+            $euro = '20,00';
+            if($rowOld && isset($rowOld['Value']) && is_numeric(trim((string)$rowOld['Value']))) {
+                $euro = number_format(((int)$rowOld['Value']) / 100, 2, ',', '');
+            }
+            if(!$apply) {
+                $this->addReport('config', $newParam, 'missing', 'Mindestbeitrag € aus '.$oldParam.' ('.$euro.')');
+                continue;
+            }
+            $insert = sprintf(
+                "INSERT INTO `%sconfig` (`Parameter`, `Value`, `Type`, `Description`) VALUES ('%s', '%s', 'string', '%s');",
+                $prefix,
+                mysqli_real_escape_string($GLOBALS['conn'], $newParam),
+                mysqli_real_escape_string($GLOBALS['conn'], $euro),
+                mysqli_real_escape_string($GLOBALS['conn'], $desc)
+            );
+            $ok = mysqli_query($GLOBALS['conn'], $insert);
+            if($ok) {
+                $this->addReport('config', $newParam, 'created', 'Mindestbeitrag € übernommen ('.$euro.')');
+            }
+            else {
+                $this->addReport(
+                    'config',
+                    $newParam,
+                    'error',
+                    'Mindestbeitrag € konnte nicht angelegt werden',
+                    mysqli_errno($GLOBALS['conn']).': '.mysqli_error($GLOBALS['conn'])
+                );
+            }
+        }
+    }
+
+    /**
+     * v17: merge Phone2 into Phone (when Phone empty), then prune drops Phone2.
+     * @param int $installedBefore
+     * @param bool $apply
+     */
+    private function migratePhone2IntoPhone($installedBefore, $apply) {
+        $installedBefore = (int)$installedBefore;
+        if($installedBefore >= 17) {
+            return;
+        }
+        foreach(array('MemberProfile', 'MembershipApplication') as $short) {
+            $table = new SQLtable($short);
+            if(!$table->exists() || !$table->columnExists('Phone2')) {
+                continue;
+            }
+            $target = $short.'.Phone2';
+            if(!$apply) {
+                $this->addReport('column', $target, 'obsolete', 'Handy → Telefon übernehmen, dann Spalte entfernen');
+                continue;
+            }
+            $name = $GLOBALS['dbprefix'].$short;
+            $sql = sprintf(
+                'UPDATE `%s` SET `Phone` = `Phone2`
+                 WHERE (`Phone` IS NULL OR TRIM(`Phone`) = \'\')
+                   AND `Phone2` IS NOT NULL AND TRIM(`Phone2`) != \'\';',
+                $name
+            );
+            $ok = mysqli_query($GLOBALS['conn'], $sql);
+            if($ok) {
+                $n = (int)mysqli_affected_rows($GLOBALS['conn']);
+                $this->addReport('column', $target, 'fixed', 'Handy-Wert in Telefon übernommen ('.$n.' Zeilen)');
+            }
+            else {
+                $this->addReport(
+                    'column',
+                    $target,
+                    'error',
+                    'Handy konnte nicht in Telefon übernommen werden',
+                    mysqli_errno($GLOBALS['conn']).': '.mysqli_error($GLOBALS['conn'])
+                );
+            }
+        }
+    }
+
+    /**
      * One-shot data fixes tied to schema bumps (after columns exist).
      * @param int $installedBefore
      * @param bool $apply
      */
     private function migratePermissionGrants($installedBefore, $apply) {
         $installedBefore = (int)$installedBefore;
-        if($installedBefore >= 12) {
-            return;
-        }
         $table = new SQLtable('Permissions');
-        if(!$table->exists() || !$table->columnExists('perm_showJubilees')) {
+        if(!$table->exists()) {
             return;
         }
-        if(!$apply) {
-            $this->addReport('config', 'perm_showJubilees', 'missing', 'Bestehende Nutzer-Leser erhalten Jubiläen-Recht bei Repair');
-            return;
-        }
-        $sql = sprintf(
-            'UPDATE `%s` SET `perm_showJubilees` = 1
-             WHERE `perm_showJubilees` = 0 AND (`perm_showUsers` = 1 OR `perm_editUsers` = 1);',
-            $GLOBALS['dbprefix'].'Permissions'
-        );
-        $ok = mysqli_query($GLOBALS['conn'], $sql);
-        if($ok) {
-            $n = (int)mysqli_affected_rows($GLOBALS['conn']);
-            $this->addReport('config', 'perm_showJubilees', 'fixed', 'Jubiläen-Recht an '.$n.' Nutzer mit Nutzer-Lesen/Schreiben vergeben');
-            if(class_exists('Permissions')) {
-                Permissions::clearCache();
+
+        if($installedBefore < 12 && $table->columnExists('perm_showJubilees')) {
+            if(!$apply) {
+                $this->addReport('config', 'perm_showJubilees', 'missing', 'Bestehende Nutzer-Leser erhalten Jubiläen-Recht bei Repair');
+            }
+            else {
+                $sql = sprintf(
+                    'UPDATE `%s` SET `perm_showJubilees` = 1
+                     WHERE `perm_showJubilees` = 0 AND (`perm_showUsers` = 1 OR `perm_editUsers` = 1);',
+                    $GLOBALS['dbprefix'].'Permissions'
+                );
+                $ok = mysqli_query($GLOBALS['conn'], $sql);
+                if($ok) {
+                    $n = (int)mysqli_affected_rows($GLOBALS['conn']);
+                    $this->addReport('config', 'perm_showJubilees', 'fixed', 'Jubiläen-Recht an '.$n.' Nutzer mit Nutzer-Lesen/Schreiben vergeben');
+                    if(class_exists('Permissions')) {
+                        Permissions::clearCache();
+                    }
+                }
+                else {
+                    $this->addReport(
+                        'config',
+                        'perm_showJubilees',
+                        'error',
+                        'Jubiläen-Recht konnte nicht migriert werden',
+                        mysqli_errno($GLOBALS['conn']).': '.mysqli_error($GLOBALS['conn'])
+                    );
+                }
             }
         }
-        else {
-            $this->addReport(
-                'config',
-                'perm_showJubilees',
-                'error',
-                'Jubiläen-Recht konnte nicht migriert werden',
-                mysqli_errno($GLOBALS['conn']).': '.mysqli_error($GLOBALS['conn'])
+
+        if($installedBefore < 16 && $table->columnExists('perm_showLog')) {
+            if(!$apply) {
+                $this->addReport('config', 'perm_showLog', 'missing', 'Rechte-Admins und Melde-Admins erhalten Log-Recht bei Repair');
+                return;
+            }
+            $permTable = $GLOBALS['dbprefix'].'Permissions';
+            $userTable = (isset($GLOBALS['identityPrefix']) ? $GLOBALS['identityPrefix'] : 'meldeliste_').'User';
+            $sql = sprintf(
+                'UPDATE `%s` p
+                 LEFT JOIN `%s` u ON u.`Index` = p.`User`
+                 SET p.`perm_showLog` = 1
+                 WHERE p.`perm_showLog` = 0
+                   AND (p.`perm_editPermissions` = 1 OR IFNULL(u.`Admin`, 0) = 1);',
+                $permTable,
+                $userTable
             );
+            $ok = mysqli_query($GLOBALS['conn'], $sql);
+            if($ok) {
+                $n = (int)mysqli_affected_rows($GLOBALS['conn']);
+                // Also create rows for Melde Admins without a mit_Permissions row yet
+                $sqlIns = sprintf(
+                    'INSERT INTO `%s` (`User`, `perm_showUsers`, `perm_editUsers`, `perm_showJubilees`, `perm_showLog`, `perm_editPermissions`)
+                     SELECT u.`Index`, 0, 0, 0, 1, 0
+                     FROM `%s` u
+                     LEFT JOIN `%s` p ON p.`User` = u.`Index`
+                     WHERE u.`Admin` = 1 AND IFNULL(u.`Deleted`, 0) != 1 AND p.`Index` IS NULL;',
+                    $permTable,
+                    $userTable,
+                    $permTable
+                );
+                $okIns = mysqli_query($GLOBALS['conn'], $sqlIns);
+                $nIns = $okIns ? (int)mysqli_affected_rows($GLOBALS['conn']) : 0;
+                $this->addReport(
+                    'config',
+                    'perm_showLog',
+                    'fixed',
+                    'Log-Recht an '.$n.' bestehende Rechte-Zeilen und '.$nIns.' neue Admin-Zeilen vergeben'
+                );
+                if(class_exists('Permissions')) {
+                    Permissions::clearCache();
+                }
+            }
+            else {
+                $this->addReport(
+                    'config',
+                    'perm_showLog',
+                    'error',
+                    'Log-Recht konnte nicht migriert werden',
+                    mysqli_errno($GLOBALS['conn']).': '.mysqli_error($GLOBALS['conn'])
+                );
+            }
         }
     }
 
