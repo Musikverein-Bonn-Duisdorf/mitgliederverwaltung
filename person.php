@@ -195,7 +195,7 @@ $showMembershipSection = $canEdit || count($timelineEvents) > 0 || count($applic
             </div>
             <div class="person-sepa-actions">
               <button type="submit" name="action" value="sepa_update" class="w3-button w3-mobile <?php echo h($optionsDB['colorBtnSubmit']); ?>">Mandat speichern</button>
-              <button type="submit" name="action" value="sepa_delete" class="w3-button w3-mobile <?php echo h($optionsDB['colorLogError']); ?>" onclick="return confirm('Mandat löschen?');">Mandat löschen</button>
+              <button type="submit" name="action" value="sepa_delete" class="w3-button w3-mobile <?php echo h($optionsDB['colorLogError']); ?>" data-confirm="Mandat löschen?" data-confirm-ok="Mandat löschen" data-confirm-ok-class="w3-btn w3-border w3-mobile <?php echo h($optionsDB['colorLogError']); ?>">Mandat löschen</button>
             </div>
           </form>
         </li>
@@ -352,7 +352,7 @@ $showMembershipSection = $canEdit || count($timelineEvents) > 0 || count($applic
             </div>
             <div class="person-sepa-actions">
               <button type="submit" name="action" value="update_period" class="w3-button w3-mobile <?php echo h($optionsDB['colorBtnSubmit']); ?>">Zeit speichern</button>
-              <button type="submit" name="action" value="delete_period" class="w3-button w3-mobile <?php echo h($optionsDB['colorLogError']); ?>" onclick="return confirm('Mitgliedschaftszeit löschen?');">Zeit löschen</button>
+              <button type="submit" name="action" value="delete_period" class="w3-button w3-mobile <?php echo h($optionsDB['colorLogError']); ?>" data-confirm="Mitgliedschaftszeit löschen?" data-confirm-ok="Zeit löschen" data-confirm-ok-class="w3-btn w3-border w3-mobile <?php echo h($optionsDB['colorLogError']); ?>">Zeit löschen</button>
             </div>
           </form>
         </details>
@@ -385,7 +385,7 @@ $showMembershipSection = $canEdit || count($timelineEvents) > 0 || count($applic
             </div>
             <div class="person-sepa-actions">
               <button type="submit" name="action" value="update_period" class="w3-button w3-mobile <?php echo h($optionsDB['colorBtnSubmit']); ?>">Zeit speichern</button>
-              <button type="submit" name="action" value="delete_period" class="w3-button w3-mobile <?php echo h($optionsDB['colorLogError']); ?>" onclick="return confirm('Mitgliedschaftszeit löschen?');">Zeit löschen</button>
+              <button type="submit" name="action" value="delete_period" class="w3-button w3-mobile <?php echo h($optionsDB['colorLogError']); ?>" data-confirm="Mitgliedschaftszeit löschen?" data-confirm-ok="Zeit löschen" data-confirm-ok-class="w3-btn w3-border w3-mobile <?php echo h($optionsDB['colorLogError']); ?>">Zeit löschen</button>
             </div>
           </form>
         </details>
@@ -421,7 +421,7 @@ $showMembershipSection = $canEdit || count($timelineEvents) > 0 || count($applic
             </div>
             <div class="person-sepa-actions">
               <button type="submit" name="action" value="update_type_period" class="w3-button w3-mobile <?php echo h($optionsDB['colorBtnSubmit']); ?>">Zeit speichern</button>
-              <button type="submit" name="action" value="delete_type_period" class="w3-button w3-mobile <?php echo h($optionsDB['colorLogError']); ?>" onclick="return confirm('Typzeit löschen?');">Zeit löschen</button>
+              <button type="submit" name="action" value="delete_type_period" class="w3-button w3-mobile <?php echo h($optionsDB['colorLogError']); ?>" data-confirm="Typzeit löschen?" data-confirm-ok="Zeit löschen" data-confirm-ok-class="w3-btn w3-border w3-mobile <?php echo h($optionsDB['colorLogError']); ?>">Zeit löschen</button>
             </div>
           </form>
         </details>
@@ -523,7 +523,7 @@ $showMembershipSection = $canEdit || count($timelineEvents) > 0 || count($applic
           </select>
         </div>
         <div class="profile-field person-action-submit">
-          <button type="submit" class="w3-button w3-mobile <?php echo h($optionsDB['colorLogError']); ?>" onclick="return confirm('Mitgliedschaft beenden?');">Beenden</button>
+          <button type="submit" class="w3-button w3-mobile <?php echo h($optionsDB['colorLogError']); ?>" data-confirm="Mitgliedschaft beenden?" data-confirm-ok="Beenden" data-confirm-ok-class="w3-btn w3-border w3-mobile <?php echo h($optionsDB['colorLogError']); ?>">Beenden</button>
         </div>
       </div>
     </form>
@@ -545,7 +545,7 @@ $showMembershipSection = $canEdit || count($timelineEvents) > 0 || count($applic
         <input type="hidden" name="user_id" value="<?php echo (int)$userId; ?>" />
         <input type="hidden" name="application_id" value="<?php echo (int)$a->Index; ?>" />
         <input type="hidden" name="action" value="delete_application" />
-        <button type="submit" class="w3-button w3-small <?php echo h($optionsDB['colorLogError']); ?>" onclick="return confirm('Antrag löschen? Mitgliedschaft bleibt unverändert.');">Löschen</button>
+        <button type="submit" class="w3-button w3-small <?php echo h($optionsDB['colorLogError']); ?>" data-confirm="Antrag löschen? Mitgliedschaft bleibt unverändert." data-confirm-ok="Löschen" data-confirm-ok-class="w3-btn w3-border w3-mobile <?php echo h($optionsDB['colorLogError']); ?>">Löschen</button>
       </form>
 <?php } ?>
     </li>
@@ -577,7 +577,7 @@ $showMembershipSection = $canEdit || count($timelineEvents) > 0 || count($applic
 <?php } ?>
       </div>
 <?php if($canEdit) { ?>
-      <form method="post" action="savePerson.php" class="person-doc-delete" onsubmit="return confirm('Dokument löschen?');">
+      <form method="post" action="savePerson.php" class="person-doc-delete" data-confirm="Dokument löschen?" data-confirm-ok="Löschen" data-confirm-ok-class="w3-btn w3-border w3-mobile <?php echo h($optionsDB['colorLogError']); ?>">
         <input type="hidden" name="user_id" value="<?php echo (int)$userId; ?>" />
         <input type="hidden" name="document_id" value="<?php echo $docId; ?>" />
         <button type="submit" name="action" value="document_delete" class="w3-button w3-mobile <?php echo h($optionsDB['colorLogError']); ?>">Löschen</button>
@@ -646,7 +646,7 @@ $showMembershipSection = $canEdit || count($timelineEvents) > 0 || count($applic
 <?php if($canEdit && !$isMemberToday) { ?>
 <section class="person-section" aria-labelledby="person-sec-loeschen">
   <h3 id="person-sec-loeschen" class="profile-col-title">Löschen</h3>
-  <form method="post" action="savePerson.php" onsubmit="return confirm('Person unwiderruflich löschen? Mitgliedschaftsdaten, SEPA, Dokumente und Stammdaten werden entfernt.');">
+  <form method="post" action="savePerson.php" data-confirm="Person unwiderruflich löschen? Mitgliedschaftsdaten, SEPA, Dokumente und Stammdaten werden entfernt." data-confirm-ok="Person löschen" data-confirm-ok-class="w3-btn w3-border w3-mobile <?php echo h($optionsDB['colorLogError']); ?>">
     <?php echo csrf_field(); ?>
     <input type="hidden" name="user_id" value="<?php echo (int)$userId; ?>" />
     <input type="hidden" name="action" value="delete_person" />

@@ -165,8 +165,9 @@ $typeLabelLong = $typeFoerdernd ? 'förderndes Mitglied' : 'aktives Mitglied';
 $printFileBase = MembershipForm::fileBasename($userId, $vornameInput, $nachnameInput);
 $isExistingMember = MembershipPeriod::userIsMemberOn($userId, date('Y-m-d'));
 $uploadConfirm = ($statusApplied || $isExistingMember)
-    ? "'Scan speichern / ersetzen? Die Mitgliedschaft bleibt unverändert.'"
-    : "'Scan hochladen und Beitritt mit dem Eintrittsdatum auf dem Formular anwenden?'";
+    ? 'Scan speichern / ersetzen? Die Mitgliedschaft bleibt unverändert.'
+    : 'Scan hochladen und Beitritt mit dem Eintrittsdatum auf dem Formular anwenden?';
+$dangerBtnClass = 'w3-btn w3-border w3-mobile '.(isset($optionsDB['colorLogError']) ? (string)$optionsDB['colorLogError'] : 'w3-red');
 
 header('Content-Type: text/html; charset=utf-8');
 ?><!DOCTYPE html>
@@ -184,7 +185,7 @@ header('Content-Type: text/html; charset=utf-8');
       <button type="submit" form="membership-form-fields" class="loan-form-btn loan-form-btn--primary" name="action" value="saveFields">Speichern</button>
       <button type="button" class="loan-form-btn" onclick="window.print()">Drucken</button>
 <?php if($statusApplied) { ?>
-      <form method="POST" action="savePerson.php" class="loan-form-upload" style="display:inline;" onsubmit="return confirm('Antrag löschen? Mitgliedschaft bleibt unverändert.');">
+      <form method="POST" action="savePerson.php" class="loan-form-upload" style="display:inline;" data-confirm="Antrag löschen? Mitgliedschaft bleibt unverändert." data-confirm-ok="Antrag löschen" data-confirm-ok-class="<?php echo $h($dangerBtnClass); ?>">
         <input type="hidden" name="user_id" value="<?php echo (int)$userId; ?>">
         <input type="hidden" name="application_id" value="<?php echo (int)$app->Index; ?>">
         <input type="hidden" name="action" value="delete_application">
@@ -196,7 +197,7 @@ header('Content-Type: text/html; charset=utf-8');
 <?php if($hasScan) { ?>
       <div class="loan-form-scan-pair">
         <a class="loan-form-btn loan-form-btn--scan" href="membership-contract.php?id=<?php echo (int)$app->Index; ?>">Scan anzeigen</a>
-        <form class="loan-form-upload" method="POST" action="membership-contract.php" onsubmit="return confirm('Scan löschen?');">
+        <form class="loan-form-upload" method="POST" action="membership-contract.php" data-confirm="Scan löschen?" data-confirm-ok="Löschen" data-confirm-ok-class="<?php echo $h($dangerBtnClass); ?>">
           <input type="hidden" name="id" value="<?php echo (int)$app->Index; ?>">
           <input type="hidden" name="action" value="deleteScan">
           <button type="submit" class="loan-form-btn">Löschen</button>
@@ -213,7 +214,9 @@ header('Content-Type: text/html; charset=utf-8');
               class="loan-form-btn loan-form-btn--primary"
               name="action"
               value="upload"
-              onclick="var i=document.querySelector('input[name=scan][form=membership-form-fields]'); if(!i||!i.files||!i.files.length){alert('Bitte zuerst eine Datei wählen.'); return false;} return confirm(<?php echo $uploadConfirm; ?>);">Hochladen</button>
+              id="membership-scan-upload"
+              data-confirm="<?php echo $h($uploadConfirm); ?>"
+              data-confirm-ok="Hochladen">Hochladen</button>
     </div>
   </div>
 
@@ -493,7 +496,7 @@ header('Content-Type: text/html; charset=utf-8');
     <form method="POST" action="membership-form.php?id=<?php echo (int)$app->Index; ?>" class="loan-form-upload">
       <input type="hidden" name="id" value="<?php echo (int)$app->Index; ?>">
       <input type="hidden" name="action" value="apply">
-      <button type="submit" class="loan-form-btn loan-form-btn--primary" onclick="return confirm('Beitritt mit Eintritt <?php echo $h(germanDate($app->DesiredEntryDate ?: date('Y-m-d'))); ?> anwenden?');">Beitritt anwenden (<?php echo $h(germanDate($app->DesiredEntryDate ?: date('Y-m-d'))); ?>)</button>
+      <button type="submit" class="loan-form-btn loan-form-btn--primary" data-confirm="Beitritt mit Eintritt <?php echo $h(germanDate($app->DesiredEntryDate ?: date('Y-m-d'))); ?> anwenden?" data-confirm-ok="Beitritt anwenden">Beitritt anwenden (<?php echo $h(germanDate($app->DesiredEntryDate ?: date('Y-m-d'))); ?>)</button>
     </form>
   </div>
 <?php } ?>
@@ -677,8 +680,48 @@ header('Content-Type: text/html; charset=utf-8');
     syncDeclareName();
     syncPrintTitle();
     syncFeeDisplays();
+
+    var scanUpload = document.getElementById('membership-scan-upload');
+    if (scanUpload) {
+      scanUpload.addEventListener('click', function (e) {
+        var i = document.querySelector('input[name=scan][form=membership-form-fields]');
+        if (i && i.files && i.files.length) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof appAlert === 'function') {
+          appAlert('Bitte zuerst eine Datei wählen.');
+        }
+      }, true);
+    }
   })();
   </script>
+  <div id="appConfirmModal" class="w3-modal" role="dialog" aria-modal="true" aria-labelledby="appConfirmTitle" style="display:none;">
+    <div class="w3-modal-content">
+      <div class="profile-shell modal-shell confirm-delete-modal">
+        <header class="profile-hero">
+          <div class="profile-hero-text">
+            <p class="profile-kicker" id="appConfirmKicker" style="display:none;"></p>
+            <h2 class="profile-title" id="appConfirmTitle">Bestätigen</h2>
+          </div>
+          <div class="profile-hero-actions">
+            <button type="button" class="modal-close w3-button" id="appConfirmClose" aria-label="Schließen">&times;</button>
+          </div>
+        </header>
+        <div class="confirm-delete-body">
+          <p class="profile-value" id="appConfirmMessage"></p>
+          <div class="profile-actions profile-actions--confirm">
+            <div class="profile-actions-primary">
+              <button type="button" class="w3-btn profile-btn-primary w3-border w3-mobile" id="appConfirmOk">OK</button>
+            </div>
+            <button type="button" class="w3-btn w3-border w3-mobile" id="appConfirmCancel">Abbrechen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="<?php echo assetUrl('js/appDialog.js'); ?>"></script>
   <script src="<?php echo assetUrl('js/ibanCheck.js'); ?>" data-blz-lookup="blzLookup.php"></script>
 </body>
 </html>

@@ -130,8 +130,6 @@ function savePara(Parameter, Value, reload) {
 	        else if(reload) {
 	            if(typeof appAlert === 'function') {
 	                appAlert('Farbschema konnte nicht übernommen werden: ' + xmlhttp.responseText);
-	            } else {
-	                alert('Farbschema konnte nicht übernommen werden: ' + xmlhttp.responseText);
 	            }
 	        }
 	    }
@@ -181,14 +179,14 @@ function resetColorScheme() {
         xmlhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
         xmlhttp.send(body);
     };
-    if(typeof appConfirm === 'function') {
-        appConfirm('Aktives Farbschema auf Werkseinstellung zurücksetzen?').then(function(ok) {
-            if(ok) run();
-        });
+    if(typeof appConfirm !== 'function') {
         return;
     }
-    if(!confirm('Aktives Farbschema auf Werkseinstellung zurücksetzen?')) return;
-    run();
+    appConfirm('Aktives Farbschema auf Werkseinstellung zurücksetzen?', {
+        okLabel: 'Zurücksetzen'
+    }).then(function(ok) {
+        if(ok) run();
+    });
 }
 </script>
 <?php
