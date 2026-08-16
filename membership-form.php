@@ -196,7 +196,7 @@ header('Content-Type: text/html; charset=utf-8');
     <div class="loan-form-toolbar-group loan-form-toolbar-group--scan">
 <?php if($hasScan) { ?>
       <div class="loan-form-scan-pair">
-        <a class="loan-form-btn loan-form-btn--scan" href="membership-contract.php?id=<?php echo (int)$app->Index; ?>">Scan anzeigen</a>
+        <a class="loan-form-btn loan-form-btn--scan" href="membership-contract.php?id=<?php echo (int)$app->Index; ?>" target="_blank" rel="noopener noreferrer">Scan anzeigen</a>
         <form class="loan-form-upload" method="POST" action="membership-contract.php" data-confirm="Scan löschen?" data-confirm-ok="Löschen" data-confirm-ok-class="<?php echo $h($dangerBtnClass); ?>">
           <input type="hidden" name="id" value="<?php echo (int)$app->Index; ?>">
           <input type="hidden" name="action" value="deleteScan">

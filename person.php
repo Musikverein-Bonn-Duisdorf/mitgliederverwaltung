@@ -568,7 +568,7 @@ $showMembershipSection = $canEdit || count($timelineEvents) > 0 || count($applic
       <div class="person-doc-main">
         <span class="person-doc-type"><?php echo h((string)$doc->DocType); ?></span>
 <?php if($hasFile) { ?>
-        <a class="person-doc-name" href="getDocument.php?id=<?php echo $docId; ?>" target="_blank" rel="noopener"><?php echo h($doc->displayName()); ?></a>
+        <a class="person-doc-name" href="getDocument.php?id=<?php echo $docId; ?>" target="_blank" rel="noopener noreferrer"><?php echo h($doc->displayName()); ?></a>
 <?php } else { ?>
         <span class="person-doc-name"><?php echo h($doc->displayName()); ?></span>
 <?php } ?>
