@@ -2,6 +2,14 @@
 
 Automatisch aus Git-Release-Commits erzeugt.
 
+## 2026-08-16-873b8 (2026-08-16)
+
+- Replace native confirm/alert with appConfirm modals.
+- Improve person membership UI and defer bank wipe until after exit.
+- Add person purge, PrivacyUrl, visible IBAN, and reduced fee.
+- Track uploads/persons placeholder gitignore.
+- Improve Beitrittsformular workflow and person documents.
+
 ## 2026-08-16-11c24 (2026-08-16)
 
 - Add post-hoc correction, retention reminders, and jubilee calendar.
