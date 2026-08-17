@@ -88,7 +88,7 @@ adminListSearchField('Name, Email, Typ…', array('onkeyup' => 'filterListRows()
        onclick="openModal('user', <?php echo (int)$u->Index; ?>)"
        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openModal('user', <?php echo (int)$u->Index; ?>);}"
        data-search="<?php echo h($search); ?>"
-       data-sort-name="<?php echo h($name); ?>"
+       data-sort-name="<?php echo h($u->getSortName()); ?>"
        data-sort-email="<?php echo h($email); ?>"
        data-sort-type="<?php echo h($typeLabel); ?>">
     <div class="user-id">

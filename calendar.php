@@ -174,7 +174,7 @@ if($view === 'year') {
        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openModal('user', <?php echo (int)$ev['userId']; ?>);}"
        data-sort-date="<?php echo h($dateIso); ?>"
        data-sort-title="<?php echo h($title); ?>"
-       data-sort-name="<?php echo h($name); ?>">
+       data-sort-name="<?php echo h(isset($ev['sortName']) ? $ev['sortName'] : $name); ?>">
     <div class="inv-id">
       <div class="inv-reg"><?php echo h(germanDate($ev['date'])); ?></div>
       <div class="inv-typ"><?php echo $isMembership ? 'Mitgliedschaft' : 'Geburtstag'; ?></div>

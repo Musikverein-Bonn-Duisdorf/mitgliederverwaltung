@@ -172,6 +172,7 @@ class JubileeCalendar
             foreach(self::eventsForUserInRange($uid, $start, $end) as $ev) {
                 $ev['userId'] = $uid;
                 $ev['name'] = $u->getName();
+                $ev['sortName'] = $u->getSortName();
                 $out[] = $ev;
             }
         }
@@ -180,7 +181,7 @@ class JubileeCalendar
             if($c !== 0) {
                 return $c;
             }
-            return strcmp($a['name'], $b['name']);
+            return strcmp($a['sortName'], $b['sortName']);
         });
         return $out;
     }

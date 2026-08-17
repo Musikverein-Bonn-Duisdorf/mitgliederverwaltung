@@ -49,6 +49,11 @@ class IdentityUser
         return trim((string)$this->Vorname.' '.(string)$this->Nachname);
     }
 
+    /** Sort key: last name, then first name. */
+    public function getSortName() {
+        return trim((string)$this->Nachname)."\t".trim((string)$this->Vorname);
+    }
+
     /**
      * Cached column names of the identity User table.
      * @return array<string,true>
