@@ -2,6 +2,12 @@
 
 Automatisch aus Git-Release-Commits erzeugt.
 
+## 2026-08-17-55a04 (2026-08-17)
+
+- Fix Aktiv/Fördernd person filters to use current type via user.
+- Sort person lists by last name, then first name.
+- Open document and membership scans in a new browser tab.
+
 ## 2026-08-16-873b8 (2026-08-16)
 
 - Replace native confirm/alert with appConfirm modals.
