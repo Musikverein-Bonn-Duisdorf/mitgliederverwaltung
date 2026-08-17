@@ -348,14 +348,7 @@ class IdentityUser
         );
         if($filter === 'aktiv' || $filter === 'foerdernd') {
             $sql .= ' AND '.MembershipPeriod::sqlUserIsMemberOn('u.`Index`', $today);
-            $sql .= sprintf(
-                ' AND EXISTS (SELECT 1 FROM `%s` t WHERE t.`Membership` = m.`Index` AND t.`Type` = "%s"
-                  AND t.`DateFrom` <= "%s" AND (t.`DateTo` IS NULL OR t.`DateTo` >= "%s"))',
-                MembershipTypePeriod::tableName(),
-                mysqli_real_escape_string($GLOBALS['conn'], $filter),
-                mysqli_real_escape_string($GLOBALS['conn'], $today),
-                mysqli_real_escape_string($GLOBALS['conn'], $today)
-            );
+            $sql .= ' AND '.MembershipTypePeriod::sqlUserTypeIsOn('u.`Index`', $filter, $today);
         }
         elseif($filter === 'member') {
             $sql .= ' AND '.MembershipPeriod::sqlUserIsMemberOn('u.`Index`', $today);

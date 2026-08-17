@@ -131,24 +131,36 @@ class MembershipTypePeriod
     }
 
     /**
-     * SQL: current type is foerdernd on $date (for Melde hide).
+     * SQL: user's current type on $date is $type (same join as userTypeOn).
      * @param string $userColumnSql
+     * @param string $type aktiv|foerdernd
      */
-    public static function sqlUserIsFoerderndOn($userColumnSql, $date = null) {
+    public static function sqlUserTypeIsOn($userColumnSql, $type, $date = null) {
+        $type = ((string)$type === 'foerdernd') ? 'foerdernd' : 'aktiv';
         $date = MembershipPeriod::normalizeDate($date);
         $mem = Membership::tableName();
         $tp = self::tableName();
         $d = mysqli_real_escape_string($GLOBALS['conn'], $date);
         return sprintf(
-            'EXISTS (SELECT 1 FROM `%s` m INNER JOIN `%s` t ON t.`Membership` = m.`Index`
-             WHERE m.`User` = %s AND t.`Type` = "foerdernd" AND t.`DateFrom` <= "%s"
-             AND (t.`DateTo` IS NULL OR t.`DateTo` >= "%s"))',
+            '(SELECT tp_t.`Type` FROM `%s` tp_m INNER JOIN `%s` tp_t ON tp_t.`Membership` = tp_m.`Index`
+              WHERE tp_m.`User` = %s AND tp_t.`DateFrom` <= "%s"
+              AND (tp_t.`DateTo` IS NULL OR tp_t.`DateTo` >= "%s")
+              ORDER BY tp_t.`DateFrom` DESC, tp_t.`Index` DESC LIMIT 1) = "%s"',
             $mem,
             $tp,
             $userColumnSql,
             $d,
-            $d
+            $d,
+            $type
         );
+    }
+
+    /**
+     * SQL: current type is foerdernd on $date (for Melde hide).
+     * @param string $userColumnSql
+     */
+    public static function sqlUserIsFoerderndOn($userColumnSql, $date = null) {
+        return self::sqlUserTypeIsOn($userColumnSql, 'foerdernd', $date);
     }
 
     public static function countOpenForMembership($membershipId) {

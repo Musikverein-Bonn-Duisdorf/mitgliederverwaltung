@@ -103,9 +103,9 @@ class MembershipPeriod
         $mem = Membership::tableName();
         $per = self::tableName();
         return sprintf(
-            'EXISTS (SELECT 1 FROM `%s` m INNER JOIN `%s` p ON p.`Membership` = m.`Index`
-             WHERE m.`User` = %s AND p.`DateFrom` <= "%s"
-             AND (p.`DateTo` IS NULL OR p.`DateTo` >= "%s"))',
+            'EXISTS (SELECT 1 FROM `%s` mp_m INNER JOIN `%s` mp_p ON mp_p.`Membership` = mp_m.`Index`
+             WHERE mp_m.`User` = %s AND mp_p.`DateFrom` <= "%s"
+             AND (mp_p.`DateTo` IS NULL OR mp_p.`DateTo` >= "%s"))',
             $mem,
             $per,
             $userColumnSql,
